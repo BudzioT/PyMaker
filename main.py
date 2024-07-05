@@ -1,6 +1,8 @@
 import sys
+import os
 
 import pygame
+from pygame.image import load
 
 from src.settings import settings
 from src.editor import Editor
@@ -17,6 +19,13 @@ class Game:
         self.surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
         # Set the game timer
         self.clock = pygame.time.Clock()
+
+        # Load the cursor image
+        cursor_img = load(os.path.join(settings.BASE_PATH, "../graphics/cursors/mouse.png")).convert_alpha()
+        # Create a cursor with the loaded image
+        cursor = pygame.cursors.Cursor((0, 0), cursor_img)
+        # Set it as the current one
+        pygame.mouse.set_cursor(cursor)
 
         # Level editor
         self.editor = Editor()
