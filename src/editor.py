@@ -18,10 +18,13 @@ from src.timer import Timer
 
 class Editor:
     """The game's level editor"""
-    def __init__(self, land_tiles):
+    def __init__(self, land_tiles, switch):
         """Initialize the editor"""
         # Get the main surface
         self.surface = pygame.display.get_surface()
+
+        # Switch function
+        self.switch = switch
 
         # Navigation origin
         self.origin = vector()
@@ -115,7 +118,7 @@ class Editor:
 
             # Save the map when user clicks return (enter)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                print(self._create_grid())
+                self.switch(self._create_grid())
 
             # Check and handle panning inputs
             self._pan_input(event)

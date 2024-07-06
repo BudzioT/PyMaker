@@ -29,12 +29,24 @@ class Transition:
 
     def display(self, delta_time):
         """Display the transition effect"""
-        # Change size of the border by little, depending on the direction, increase or decrease it
-        self.border_width += 1000 * delta_time * self.direction
+        # If the transition is active
+        if self.active:
+            # Change size of the border by little, depending on the direction, increase or decrease it
+            self.border_width += 1000 * delta_time * self.direction
 
-        # If border exceeded the threshold, set the direction to the opposite one
-        if self.border_width >= self.threshold:
-            self.direction = -1
+            # If border exceeded the threshold, set the direction to the opposite one
+            if self.border_width >= self.threshold:
+                self.direction = -1
+                # Toggle the switch
+                self.toggle_editor()
 
-        # Draw the effect
-        pygame.draw.circle(self.surface, "black", self.center, self.radius, int(self.border_width))
+            # If transition has ended
+            if self.border_width < 0:
+                # Reset the flag
+                self.active = False
+                # Reset the border and direction
+                self.border_width = 0
+                self.direction = 1
+
+            # Draw the effect
+            pygame.draw.circle(self.surface, "black", self.center, self.radius, int(self.border_width))

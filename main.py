@@ -34,9 +34,7 @@ class Main:
         pygame.mouse.set_cursor(cursor)
 
         # Level editor
-        self.editor = Editor(self.land_tiles)
-        # Level itself
-        self.level = Level()
+        self.editor = Editor(self.land_tiles, self._switch)
 
         # Editor active flag
         self.editor_on = True
@@ -71,10 +69,28 @@ class Main:
         """Import all general assets"""
         # Import land tiles
         self.land_tiles = utilities.import_folder_dict("../graphics/terrain/land")
+        # Import bottom water tile
+        self.water_bottom = (load(os.path.join(settings.BASE_PATH, "../graphics/terrain/water/water_bottom.png"))
+                             .convert_alpha())
+        # Get the entire water animation
+        self.water_top = utilities.import_folder("../graphics/terrain/water/animation")
 
     def _toggle_editor(self):
         """Toggle the editor"""
         self.editor_on = not self.editor_on
+
+    def _switch(self, grid=None):
+        """Switch between the level and the editor, saving the map"""
+        # Turn on the transition
+        self.transition.active = True
+
+        # If a grid exists
+        if grid:
+            self.level = Level(grid, self._switch, {
+                "land": self.land_tiles,
+                "water_bottom": self.water_bottom,
+                "water_top": self.water_top
+            })
 
 
 if __name__ == "__main__":
