@@ -27,13 +27,12 @@ class Utilities:
                 # Save the path to the image
                 full_path = path + '/' + image_name
                 # Load it
-                image_surface = pygame.image.load(full_path)
+                image_surface = pygame.image.load(full_path).convert_alpha()
 
                 # Append it to the images list
                 images_list.append(image_surface)
         # Return the images
         return images_list
-
 
     def import_folder_dict(self, path):
         """Import the folder as a dictionary"""
@@ -50,7 +49,7 @@ class Utilities:
                 # Save its path
                 full_path = path + '/' + image_name
                 # Load the image
-                image_surface = pygame.image.load(full_path)
+                image_surface = pygame.image.load(full_path).convert_alpha()
 
                 # Create a new item in dictionary with image name (without .png) as key and the surface as value
                 images_dict[image_name.split('.')[0]] = image_surface

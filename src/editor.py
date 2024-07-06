@@ -11,6 +11,7 @@ from src.settings import settings
 from src.menu import Menu
 from src.map_tile  import MapTile
 from src.utilities import utilities
+from src.map_object import MapObject
 
 
 class Editor:
@@ -39,6 +40,8 @@ class Editor:
 
         # Map data
         self.map_data = {}
+        # Object of the map (objects are off-grid tiles)
+        self.map_objects = pygame.sprite.Group()
 
         # Land tile surfaces
         self.land_tiles = land_tiles
@@ -48,8 +51,18 @@ class Editor:
         # Last clicked cell
         self.last_cell = None
 
+        # Dragging objects flag
+        self.drag_active = False
+
         # Create the menu
         self.menu = Menu()
+
+        # The player with ID 0
+        MapObject((200, settings.WINDOW_HEIGHT / 2),
+                  self.animations[0]["frames"], 0, self.origin, self.map_objects)
+        # Sky drag handle (ID: 1)
+        self.sky_handle = MapObject((settings.WINDOW_WIDTH / 2, settings.WINDOW_HEIGHT / 2),
+                                    [self.sky_handle_surface], 1, self.origin, self.map_objects)
 
     def run(self, delta_time):
         """Run the level editor"""
@@ -58,6 +71,8 @@ class Editor:
 
         # Run the animations
         self._update_animations(delta_time)
+        # Update the map objects
+        self.map_objects.update(delta_time)
 
         # Update the surface
         self._update_surface()
@@ -81,6 +96,10 @@ class Editor:
 
             # Handle menu clicks
             self._menu_click(event)
+
+            # Handle object dragging
+            self._drag_object(event)
+
             # Handle clicks outside of menu
             self._map_add()
             self._map_remove()
@@ -110,6 +129,10 @@ class Editor:
         # If user is panning, move the origin to the same direction but with offset
         if self.pan:
             self.origin = vector(mouse_pos()) - self.pan_offset
+
+            # Update the objects
+            for obj in self.map_objects.sprites():
+                obj.update_pos(self.origin)
 
     def _select(self, event):
         """Select the items"""
@@ -254,13 +277,17 @@ class Editor:
                                                          pos[1] + settings.TILE_SIZE))
                 # Blit the enemy
                 self.surface.blit(frames[frame], rect)
+        self.map_objects.draw(self.surface)
 
     def _map_add(self):
         """Add the item to the map"""
-        # If user pressed the left mouse button but didn't click on the menu
-        if mouse_pressed()[0] and not self.menu.rect.collidepoint(mouse_pos()):
+        # If user pressed the left mouse button but didn't click on the menu and isn't dragging any object
+        if (mouse_pressed()[0]) and (not self.menu.rect.collidepoint(mouse_pos())) and (not self.drag_active):
             # Get the current clicked cell
             current_cell = self._get_current_cell()
+
+            # Check if user is placing object or a tile
+            
 
             # If user didn't click on the same cell twice
             if current_cell != self.last_cell:
@@ -294,6 +321,26 @@ class Editor:
                         del self.map_data[current_cell]
                     # Fix the tiling
                     self._check_neighbor_cells(current_cell)
+
+    def _drag_object(self, event):
+        """Handle object dragging"""
+        # If user is clicking the left mouse button
+        if event.type == pygame.MOUSEBUTTONDOWN and mouse_pressed()[0]:
+            # Go through each object
+            for obj in self.map_objects:
+                # If it collides with the place, where the user clicked, prepare the dragging action
+                if obj.rect.collidepoint(event.pos):
+                    obj.prepare_drag()
+                    # Set the dragging active flag to True
+                    self.drag_active = True
+
+        # If user is done dragging
+        if event.type == pygame.MOUSEBUTTONUP and self.drag_active:
+            # Go through every object
+            for obj in self.map_objects:
+                # Stop dragging it and reset the flag
+                obj.end_drag(self.origin)
+                self.drag_active = False
 
     def _check_neighbor_cells(self, pos):
         """Check the neighbor cells of the given cell position"""
@@ -332,7 +379,11 @@ class Editor:
     def _import_assets(self):
         """Import assets not loaded in the main file"""
         # Load the bottom part of water
-        self.water_bottom = load(os.path.join(settings.BASE_PATH, "../graphics/terrain/water/water_bottom.png"))
+        self.water_bottom = (load(os.path.join(settings.BASE_PATH, "../graphics/terrain/water/water_bottom.png"))
+                             .convert_alpha())
+        # Load the sky handle
+        self.sky_handle_surface = (load(os.path.join(settings.BASE_PATH, "../graphics/cursors/handle.png"))
+                             .convert_alpha())
 
         # Animations dictionary
         self.animations = {}
