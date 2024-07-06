@@ -64,6 +64,13 @@ class Editor:
         # Sky drag handle (ID: 1)
         self.sky_handle = MapObject((settings.WINDOW_WIDTH / 2, settings.WINDOW_HEIGHT / 2),
                                     [self.sky_handle_surface], 1, self.origin, self.map_objects)
+        # Active clouds
+        self.clouds = []
+        # Import cloud surfaces
+        self.cloud_surfaces = utilities.import_folder("../graphics/clouds")
+        # Initialize the cloud timer
+        self.cloud_timer = pygame.USEREVENT + 1
+        pygame.time.set_timer(self.cloud_timer, 2500)
 
         # Object adding timer
         self.object_timer = Timer(400)
@@ -82,7 +89,7 @@ class Editor:
         self.object_timer.update()
 
         # Update the surface
-        self._update_surface()
+        self._update_surface(delta_time)
 
     # Input
     def _get_events(self):
@@ -110,6 +117,9 @@ class Editor:
             # Handle clicks outside of menu
             self._map_add()
             self._map_remove()
+
+            # Create the clouds
+            self._create_clouds(event)
 
     def _pan_input(self, event):
         """Get panning input"""
@@ -187,9 +197,12 @@ class Editor:
         return column, row
 
     # Drawing
-    def _update_surface(self):
+    def _update_surface(self, delta_time):
         """Update and draw everything onto the main surface"""
         self.surface.fill("white")
+
+        # Draw the sky
+        self._display_sky(delta_time)
 
         # Draw the map
         self._draw_map()
@@ -197,14 +210,61 @@ class Editor:
         # Draw the tile lines
         self._draw_lines()
 
-        # Draw a circle
-        pygame.draw.circle(self.surface, "red", self.origin, 10)
-
         # If user want's to put something, draw a preview
         self._show_preview()
 
         # Display the menu
         self.menu.display(self.select_index)
+
+    def _display_sky(self, delta_time):
+        """Draw the sky based off sky handle position"""
+        # Draw the sky
+        self.surface.fill(settings.COLORS["SKY"])
+
+        # Get center of the sky handle
+        pos_y = self.sky_handle.rect.centery
+
+        # If horizon is visible on the screen, draw it
+        if pos_y > 0:
+            # Horizon lines
+            horizon_rect_1 = pygame.Rect(0, pos_y - 2, settings.WINDOW_WIDTH, 10)
+            horizon_rect_2 = pygame.Rect(0, pos_y - 7, settings.WINDOW_WIDTH, 4)
+            horizon_rect_3 = pygame.Rect(0, pos_y - 10, settings.WINDOW_WIDTH, 2)
+            # Draw the horizon lines
+            pygame.draw.rect(self.surface, settings.COLORS["HORIZON_TOP"], horizon_rect_1)
+            pygame.draw.rect(self.surface, settings.COLORS["HORIZON_TOP"], horizon_rect_2)
+            pygame.draw.rect(self.surface, settings.COLORS["HORIZON_TOP"], horizon_rect_3)
+
+            # Draw the clouds, only if sky is visible
+            self._display_clouds(delta_time, pos_y)
+
+        # If horizon is on the screen, draw the sea in excepted position
+        if 0 < pos_y < settings.WINDOW_HEIGHT:
+            # Create the sea rectangle
+            sea_rect = pygame.Rect(0, pos_y, settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT)
+            # Draw it
+            pygame.draw.rect(self.surface, settings.COLORS["SEA"], sea_rect)
+            # Draw another horizon line for a nice look
+            pygame.draw.line(self.surface, settings.COLORS["HORIZON"],
+                             (0, pos_y), (settings.WINDOW_WIDTH, pos_y), 3)
+
+        # Otherwise just fill the entire screen with sea color, the horizon isn't visible anyway
+        if pos_y < 0:
+            self.surface.fill(settings.COLORS["SEA"])
+
+    def _display_clouds(self, delta_time, pos_y):
+        """Display the clouds"""
+        # Go through every active cloud
+        for cloud in self.clouds:
+            # Move it based off the speed
+            cloud["pos"][0] -= cloud["speed"] * delta_time
+
+            # Calculate its position, to make them move with horizon
+            cloud_x = cloud["pos"][0]
+            cloud_y = pos_y - cloud["pos"][1]
+
+            # Blit it
+            self.surface.blit(cloud["surface"], ())
 
     def _draw_lines(self):
         """Draw the tile lines"""
@@ -348,6 +408,13 @@ class Editor:
                     # Fix the tiling
                     self._check_neighbor_cells(current_cell)
 
+    def _create_clouds(self, event):
+        """Create the clouds"""
+        # If cloud cooldown passed
+        if event.type == self.cloud_timer:
+            # Choose a random cloud
+            
+
     def _drag_object(self, event):
         """Handle object dragging"""
         # If user is clicking the left mouse button
@@ -442,7 +509,25 @@ class Editor:
             # Otherwise display the preview of the tile
             else:
                 # Get the ID's of tiles and objects and their type
-                type_dict = {item_id: item["type"] for item_id, item in settings.EDITOR_INFO}
+                type_dict = {item_id: item["type"] for item_id, item in settings.EDITOR_INFO.items()}
+
+                # Preview surface with lowered alpha value
+                surface = self.previews[self.select_index].copy()
+                surface.set_alpha(200)
+
+                # Check if this is a tile
+                if type_dict[self.select_index] == "tile":
+                    # Get this cell
+                    current_cell = self._get_current_cell()
+                    # Get its rect in the world, in tile position
+                    rect = surface.get_rect(topleft=self.origin + vector(current_cell) * settings.TILE_SIZE)
+
+                # Else get rect of the object in pixels
+                else:
+                    rect = surface.get_rect(center=mouse_pos())
+
+                # Blit the preview
+                self.surface.blit(surface, rect)
 
     def _import_assets(self):
         """Import assets not loaded in the main file"""
@@ -468,8 +553,10 @@ class Editor:
                     "length": len(graphics)
                 }
 
-        # Previews dictionary
-        self.previews = {}
+        # Load the previews into a dictionary
+        self.previews = {item_id: load(os.path.join(settings.BASE_PATH, item["preview"]))
+                         for item_id, item in settings.EDITOR_INFO.items()
+                         if item["preview"]}
 
     def _update_animations(self, delta_time):
         """Update the animations"""
