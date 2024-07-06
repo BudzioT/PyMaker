@@ -1,9 +1,11 @@
+import os.path
 import sys
 
 import pygame
 from pygame.math import Vector2 as vector
 from pygame.mouse import get_pressed as mouse_pressed
 from pygame.mouse import get_pos as mouse_pos
+from pygame.image import load
 
 from src.settings import settings
 from src.menu import Menu
@@ -12,7 +14,7 @@ from src.MapTile import MapTile
 
 class Editor:
     """The game's level editor"""
-    def __init__(self):
+    def __init__(self, land_tiles):
         """Initialize the editor"""
         # Get the main surface
         self.surface = pygame.display.get_surface()
@@ -36,6 +38,11 @@ class Editor:
 
         # Map data
         self.map_data = {}
+
+        # Land tile surfaces
+        self.land_tiles = land_tiles
+        # Import other assets
+        self._import_assets()
 
         # Last clicked cell
         self.last_cell = None
@@ -150,7 +157,7 @@ class Editor:
         self.surface.fill("white")
 
         # Draw the map
-        self.draw_map()
+        self._draw_map()
 
         # Draw the tile lines
         self._draw_lines()
@@ -192,7 +199,7 @@ class Editor:
         # Blit the support lines onto the main surface
         self.surface.blit(self.support_surface, (0, 0))
 
-    def draw_map(self):
+    def _draw_map(self):
         """Draw the map"""
         # Go through each tile placed
         for cell_pos, tile in self.map_data.items():
@@ -207,9 +214,11 @@ class Editor:
 
             # If it has terrain
             if tile.terrain:
-                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
-                test_surface.fill("brown")
-                self.surface.blit(test_surface, pos)
+                # Convert the terrain to a string
+                terrain_string = ''.join(tile.neighbor_terrain)
+                # Take the style based off the neighbors, if it doesn't exist just set it to 'X'
+                terrain_style = terrain_string if terrain_string in self.land_tiles else 'X'
+                self.surface.blit(self.land_tiles[terrain_style], pos)
 
             # If it has a coin
             if tile.coin:
@@ -241,5 +250,43 @@ class Editor:
                 else:
                     self.map_data[current_cell] = MapTile(self.select_index)
 
+                self._check_neighbor_cells(current_cell)
+
                 # Save the current cell, as the last one
                 self.last_cell = current_cell
+
+    def _check_neighbor_cells(self, pos):
+        """Check the neighbor cells of the given cell position"""
+        # Amount of the neighbor cells
+        local_size = 3
+        # Local tiles positions in map cell coordinates
+        local_tiles = [(pos[0] + column - int(local_size / 2), pos[1] + row - int(local_size / 2))
+                       for column in range(local_size)
+                       for row in range(local_size)]
+
+        # Go through each cell in the local area of the given cell positions
+        for cell in local_tiles:
+            # If cell exists
+            if cell in self.map_data:
+                # Prepare the neighbor list
+                self.map_data[cell].neighbor_terrain = []
+
+                # Go through each neighbor tile possible
+                for name, side in settings.NEIGHBOR_CELLS.items():
+                    # Take the neighbor cell position
+                    neighbor_cell = (cell[0] + side[0], cell[1] + side[1])
+
+                    # If the neighbor exists, and it's water on top of the current cell
+                    if self.map_data[cell] and self.map_data[neighbor_cell].water and name == 'A':
+                        # Set the water on top flag to True
+                        self.map_data[cell].water_on_top = True
+
+                    # If the neighbor exists and it's a terrain
+                    if neighbor_cell in self.map_data:
+                        # Add its name to the current cell neighbors
+                        self.map_data[cell].neighbor_terrain.append(name)
+
+    def _import_assets(self):
+        """Import assets not loaded in the main file"""
+        # Load the water
+        self.water_bottom = load(os.path.join(settings.BASE_PATH, "../graphics/terrain/water/water_bottom.png"))

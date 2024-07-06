@@ -91,5 +91,17 @@ class Settings:
                  "preview": "../graphics/preview/right_bg.png"},
         }
 
+        # Directions of the neighbor cells and their names
+        self.NEIGHBOR_CELLS = {
+            'A': (0, -1),
+            'B': (1, -1),
+            'C': (1, 0),
+            'D': (1, 1),
+            'E': (0, 1),
+            'F': (-1, 1),
+            'G': (-1, 0),
+            'H': (-1, -1)
+        }
+
 
 settings = Settings()

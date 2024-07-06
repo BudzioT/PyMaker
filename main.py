@@ -22,7 +22,7 @@ class Main:
         self.clock = pygame.time.Clock()
 
         # Import the assets
-        self._import_asssets()
+        self._import_assets()
 
         # Load the cursor image
         cursor_img = load(os.path.join(settings.BASE_PATH, "../graphics/cursors/mouse.png")).convert_alpha()
@@ -32,7 +32,7 @@ class Main:
         pygame.mouse.set_cursor(cursor)
 
         # Level editor
-        self.editor = Editor()
+        self.editor = Editor(self.land_tiles)
 
     def run(self):
         """Run the game loop"""
@@ -63,9 +63,10 @@ class Main:
         """Update the main surface and draw everything onto it"""
         pygame.display.update()
 
-    def _import_asssets(self):
-        """Import all the assets"""
-        self.land_tiles = utilities.import_folder("../graphics/terrain/land")
+    def _import_assets(self):
+        """Import all general assets"""
+        # Import land tiles
+        self.land_tiles = utilities.import_folder_dict("../graphics/terrain/land")
 
 
 if __name__ == "__main__":

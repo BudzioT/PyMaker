@@ -31,15 +31,31 @@ class Utilities:
 
                 # Append it to the images list
                 images_list.append(image_surface)
-
-                print(full_path)
-
+        # Return the images
         return images_list
 
 
     def import_folder_dict(self, path):
         """Import the folder as a dictionary"""
-        pass
+        # Images dictionary
+        images_dict = {}
+
+        # Change the path into absolute
+        path = str(path_join(settings.BASE_PATH, path))
+
+        # Go through each of the file and directory
+        for path, directory, images in os.walk(path):
+            # Go through each image
+            for image_name in images:
+                # Save its path
+                full_path = path + '/' + image_name
+                # Load the image
+                image_surface = pygame.image.load(full_path)
+
+                # Create a new item in dictionary with image name (without .png) as key and the surface as value
+                images_dict[image_name.split('.')[0]] = image_surface
+        # Return the images dictionary
+        return images_dict
 
 
 utilities = Utilities()
