@@ -30,6 +30,9 @@ class MapTile:
         # Add the tile ID
         self.add_id(tile_id)
 
+        # Empty tile flag
+        self.empty = False
+
     def add_id(self, tile_id):
         """Add item's ID into map tile"""
         # Get the tile's style
@@ -49,3 +52,29 @@ class MapTile:
         elif current_style == "enemy":
             self.enemy = tile_id
 
+    def remove_id(self, tile_id):
+        """Remove item's ID from a tile in the map"""
+        # Get the tile's style
+        current_style = self.data[tile_id]
+
+        # If tile is a terrain, remove it
+        if current_style == "terrain":
+            self.terrain = False
+        # Remove the water
+        elif current_style == "water":
+            self.water = False
+        # Remove coin when selected
+        elif current_style == "coin":
+            self.coin = False
+        # Remove the enemy
+        elif current_style == "enemy":
+            self.enemy = False
+
+        # Check if tile is empty now
+        self.check()
+
+    def check(self):
+        """Check if tile is empty"""
+        # If there is nothing on the tile, set the empty flag
+        if (not self.terrain) and (not self.water) and (not self.coin) and (not self.enemy):
+            self.empty = True

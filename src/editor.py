@@ -9,7 +9,8 @@ from pygame.image import load
 
 from src.settings import settings
 from src.menu import Menu
-from src.MapTile import MapTile
+from src.map_tile  import MapTile
+from src.utilities import utilities
 
 
 class Editor:
@@ -55,6 +56,9 @@ class Editor:
         # Run the event loop
         self._get_events()
 
+        # Run the animations
+        self._update_animations(delta_time)
+
         # Update the surface
         self._update_surface()
 
@@ -79,6 +83,7 @@ class Editor:
             self._menu_click(event)
             # Handle clicks outside of menu
             self._map_add()
+            self._map_remove()
 
     def _pan_input(self, event):
         """Get panning input"""
@@ -208,9 +213,15 @@ class Editor:
 
             # If tile has water
             if tile.water:
-                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
-                test_surface.fill("blue")
-                self.surface.blit(test_surface, pos)
+                if tile.water_on_top:
+                    self.surface.blit(self.water_bottom, pos)
+                else:
+                    # Get animation frames of the water (that has ID equal to 3)
+                    frames = self.animations[3]["frames"]
+                    # Grab the current frame as int
+                    frame = int(self.animations[3]["frame"])
+                    # Blit the frame
+                    self.surface.blit(frames[frame], pos)
 
             # If it has terrain
             if tile.terrain:
@@ -222,16 +233,27 @@ class Editor:
 
             # If it has a coin
             if tile.coin:
-                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
-                test_surface.fill("yellow")
-                self.surface.blit(test_surface, pos)
+                # Take the frames of coin with certain ID
+                frames = self.animations[tile.coin]["frames"]
+                # Get the frame
+                frame = int(self.animations[tile.coin]["frame"])
+                # Center the coin in the tile
+                rect = frames[frame].get_rect(center=(pos[0] + settings.TILE_SIZE // 2,
+                                                      pos[1] + settings.TILE_SIZE // 2))
+                # Blit it
+                self.surface.blit(frames[frame], rect)
 
             # Otherwise if it has an enemy
             if tile.enemy:
-                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
-                test_surface.fill("red")
-                self.surface.blit(test_surface, pos)
-
+                # Take the enemy's frames
+                frames = self.animations[tile.enemy]["frames"]
+                # Get current frame
+                frame = int(self.animations[tile.enemy]["frame"])
+                # Place it on the middle bottom of a tile
+                rect = frames[frame].get_rect(midbottom=(pos[0] + settings.TILE_SIZE // 2,
+                                                         pos[1] + settings.TILE_SIZE))
+                # Blit the enemy
+                self.surface.blit(frames[frame], rect)
 
     def _map_add(self):
         """Add the item to the map"""
@@ -255,6 +277,24 @@ class Editor:
                 # Save the current cell, as the last one
                 self.last_cell = current_cell
 
+    def _map_remove(self):
+        """Remove a tile from the map"""
+        # Check if user right-clicked on a tile and not on the menu
+        if mouse_pressed()[2] and not self.menu.rect.collidepoint(mouse_pos()):
+            # If there is any data in map
+            if self.map_data:
+                # Get the current cell and check if it exists in map data
+                current_cell = self._get_current_cell()
+                if current_cell in self.map_data:
+                    # Remove it
+                    self.map_data[current_cell].remove_id(self.select_index)
+
+                    # If the current cell is empty now, remove it from the map
+                    if self.map_data[current_cell].empty:
+                        del self.map_data[current_cell]
+                    # Fix the tiling
+                    self._check_neighbor_cells(current_cell)
+
     def _check_neighbor_cells(self, pos):
         """Check the neighbor cells of the given cell position"""
         # Amount of the neighbor cells
@@ -270,16 +310,19 @@ class Editor:
             if cell in self.map_data:
                 # Prepare the neighbor list
                 self.map_data[cell].neighbor_terrain = []
+                self.map_data[cell].water_on_top = False
 
                 # Go through each neighbor tile possible
                 for name, side in settings.NEIGHBOR_CELLS.items():
                     # Take the neighbor cell position
                     neighbor_cell = (cell[0] + side[0], cell[1] + side[1])
 
-                    # If the neighbor exists, and it's water on top of the current cell
-                    if self.map_data[cell] and self.map_data[neighbor_cell].water and name == 'A':
-                        # Set the water on top flag to True
-                        self.map_data[cell].water_on_top = True
+                    # If neighbor cell exists
+                    if neighbor_cell in self.map_data:
+                        # If the neighbor exists, and it's water on top of the current cell
+                        if self.map_data[cell].water and self.map_data[neighbor_cell].water and name == 'A':
+                            # Set the water on top flag to True
+                            self.map_data[cell].water_on_top = True
 
                     # If the neighbor exists and it's a terrain
                     if neighbor_cell in self.map_data:
@@ -288,5 +331,30 @@ class Editor:
 
     def _import_assets(self):
         """Import assets not loaded in the main file"""
-        # Load the water
+        # Load the bottom part of water
         self.water_bottom = load(os.path.join(settings.BASE_PATH, "../graphics/terrain/water/water_bottom.png"))
+
+        # Animations dictionary
+        self.animations = {}
+        # Go through every item that exists in editor info
+        for item_id, item in settings.EDITOR_INFO.items():
+            # If this item has animation
+            if item["graphics"]:
+                # Load the animation images
+                graphics = utilities.import_folder(item["graphics"])
+                # Insert it into dictionary with current frame set as 0
+                self.animations[item_id] = {
+                    "frame": 0,
+                    "frames": graphics,
+                    "length": len(graphics)
+                }
+
+    def _update_animations(self, delta_time):
+        """Update the animations"""
+        # Go through each animation that is loaded
+        for item in self.animations.values():
+            # Increase the frame of it
+            item["frame"] += settings.ANIMATION_SPEED * delta_time
+            # If the frame is too high, return it to the first one
+            if item["frame"] >= item["length"]:
+                item["frame"] = 0

@@ -12,6 +12,9 @@ class Settings:
         self.WINDOW_WIDTH = 1280
         self.WINDOW_HEIGHT = 720
 
+        # Animation speed
+        self.ANIMATION_SPEED = 7
+
         # File base absolute path
         self.BASE_PATH = os.path.abspath(os.path.dirname(__file__))
 
