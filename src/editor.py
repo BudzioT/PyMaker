@@ -33,6 +33,12 @@ class Editor:
         # Object select index
         self.select_index = 2
 
+        # Map data
+        self.map_data = {}
+
+        # Last clicked cell
+        self.last_cell = None
+
         # Create the menu
         self.menu = Menu()
 
@@ -55,10 +61,16 @@ class Editor:
                 pygame.quit()
                 # Quit
                 sys.exit()
+
             # Check and handle panning inputs
             self._pan_input(event)
             # Check for select input
             self._select(event)
+
+            # Handle menu clicks
+            self._menu_click(event)
+            # Handle clicks outside of menu
+            self._map_add()
 
     def _pan_input(self, event):
         """Get panning input"""
@@ -96,6 +108,7 @@ class Editor:
             # If user pressed left, decrease it
             if event.type == pygame.K_a or event.type == pygame.K_LEFT:
                 self.select_index -= 1
+
         # Don't allow the user to change index below 0
         self.select_index = max(self.select_index, 0)
         # Don't allow him to change it to high too
@@ -105,7 +118,31 @@ class Editor:
         """Handle menu clicks"""
         # If the user clicked the moused and the cursor is on the menu, handle the click
         if event.type == pygame.MOUSEBUTTONDOWN and self.menu.rect.collidepoint(mouse_pos()):
-            self.menu.handle_click()
+            # Save the selection index
+            self.select_index = self.menu.handle_click(mouse_pos(), mouse_pressed())
+
+    def _get_current_cell(self):
+        """Get the current cell"""
+        # Get the distance between the mouse position and the map origin
+        distance_origin = vector(mouse_pos()) - self.origin
+
+        # If horizontal distance is higher than 0, just get its tile column
+        if distance_origin.x > 0:
+            column = int(distance_origin.x / settings.TILE_SIZE)
+        # Otherwise subtract one, to prevent two tiles with the same tile position
+        else:
+            column = int(distance_origin.x / settings.TILE_SIZE) - 1
+
+        # If vertical distance is below the origin, set the row to the tile
+        if distance_origin.y > 0:
+            row = int(distance_origin.y / settings.TILE_SIZE)
+        # Otherwise subtract one again
+        else:
+            row = int(distance_origin.y / settings.TILE_SIZE) - 1
+
+        print(column, row)
+        # Return the cell's position
+        return column, row
 
     # Drawing
     def _update_surface(self):
@@ -119,7 +156,7 @@ class Editor:
         pygame.draw.circle(self.surface, "red", self.origin, 10)
 
         # Display the menu
-        self.menu.display()
+        self.menu.display(self.select_index)
 
     def _draw_lines(self):
         """Draw the tile lines"""
@@ -151,3 +188,23 @@ class Editor:
 
         # Blit the support lines onto the main surface
         self.surface.blit(self.support_surface, (0, 0))
+
+    def _map_add(self):
+        """Add the item to the map"""
+        # If user pressed the left mouse button but didn't click on the menu
+        if mouse_pressed()[0] and not self.menu.rect.collidepoint(mouse_pos()):
+            # Get the current clicked cell
+            current_cell = self._get_current_cell()
+
+            # If user didn't click on the same cell twice
+            if current_cell != self.last_cell:
+                # Change the cell
+                if current_cell in self.map_data:
+                    pass
+                # Add new cell to the map data
+                else:
+                    self.map_data[current_cell] = "Cell"
+                # Save the current cell, as the last one
+                self.last_cell = current_cell
+
+            print(self.map_data)

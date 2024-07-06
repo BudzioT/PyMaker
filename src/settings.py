@@ -23,7 +23,8 @@ class Settings:
             "HORIZON": "#F5F1DE",
             "HORIZON_TOP": "#D1AA9D",
             "BUTTON": "#43424F",
-            "BUTTON_LINE": "#EDECE4"
+            "BUTTON_LINE": "#EDECE4",
+            "MENU": "#82827E"
         }
 
         # Information for the map editor

@@ -20,19 +20,19 @@ class Menu:
         self._create_menu()
 
     # Drawing
-    def display(self):
+    def display(self, index):
         """Display the menu"""
         # Draw the menu area
-        pygame.draw.rect(self.surface, "red", self.rect)
+        pygame.draw.rect(self.surface, settings.COLORS["MENU"], self.rect, 0, 4)
 
         # Update the buttons
         self.buttons.update()
 
         # Draw the buttons
-        pygame.draw.rect(self.surface, "green", self.tile_button_rect)
-        pygame.draw.rect(self.surface, "green", self.enemy_button_rect)
-        pygame.draw.rect(self.surface, "green", self.coin_button_rect)
-        pygame.draw.rect(self.surface, "green", self.palm_button_rect)
+        self.buttons.draw(self.surface)
+
+        # Highlight the selected one
+        self._highlight_button(index)
 
     def _create_menu(self):
         """Create the menu"""
@@ -71,9 +71,49 @@ class Menu:
         Button(self.coin_button_rect, self.buttons, self.menu_surfaces["coin"])
         Button(self.palm_button_rect, self.buttons, self.menu_surfaces["palm fg"], self.menu_surfaces["palm bg"])
 
-    def handle_click(self):
+    def _highlight_button(self, index):
+        """Highlight selected button"""
+        # On selection, highlight the terrain button
+        if settings.EDITOR_INFO[index]["menu"] == "terrain":
+            pygame.draw.rect(self.surface, settings.COLORS["BUTTON_LINE"],
+                             self.tile_button_rect.inflate(4, 4), 5, 4)
+
+        # When selected, highlight the enemy button
+        elif settings.EDITOR_INFO[index]["menu"] == "enemy":
+            pygame.draw.rect(self.surface, settings.COLORS["BUTTON_LINE"],
+                             self.enemy_button_rect.inflate(4, 4), 5, 4)
+
+        # If coins are selected, highlight this button
+        elif settings.EDITOR_INFO[index]["menu"] == "coin":
+            pygame.draw.rect(self.surface, settings.COLORS["BUTTON_LINE"],
+                             self.coin_button_rect.inflate(4, 4), 5, 4)
+
+        # Otherwise if user selected any of the palms, highlight them
+        elif settings.EDITOR_INFO[index]["menu"] in ("palm fg", "palm bg"):
+            pygame.draw.rect(self.surface, settings.COLORS["BUTTON_LINE"],
+                             self.palm_button_rect.inflate(4, 4), 5, 4)
+
+    def handle_click(self, mouse_pos, mouse_button):
         """Handle user's clicks"""
-        print("Clicked menu")
+        # Go through each of the buttons
+        for button in self.buttons:
+            # If mouse clicked on this button
+            if button.rect.collidepoint(mouse_pos):
+                # Middle click
+                if mouse_button[1]:
+                    # Change between alternate items if possible, otherwise just remain the main ones
+                    if button.items["alt"]:
+                        button.main = not button.main
+                # Right click
+                if mouse_button[2]:
+                    # Switch the item based off the index
+                    button.switch_index()
+
+                # Return the selected ID
+                return button.get_id()
+
+        # Prevent from clicking between the buttons
+        return 0
 
     def _get_data(self):
         """Get the data from dictionary"""
@@ -121,3 +161,18 @@ class Button(pygame.sprite.Sprite):
         rect = surface.get_rect(center=(self.rect.width / 2, self.rect.height / 2))
         # Blit the current button image
         self.image.blit(surface, rect)
+
+    def switch_index(self):
+        """Switch index of the button"""
+        # Increase the index
+        self.index += 1
+        # If user's selecting main items, don't allow him to go too far
+        if self.main:
+            self.index = 0 if self.index >= len(self.items["main"]) else self.index
+        # Same for alternative items
+        else:
+            self.index = 0 if self.index >= len(self.items["alt"]) else self.index
+
+    def get_id(self):
+        """Return button's ID"""
+        return self.items["main" if self.main else "alt"][self.index][0]
