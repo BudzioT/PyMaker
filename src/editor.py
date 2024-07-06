@@ -101,6 +101,11 @@ class Editor:
         # Don't allow him to change it to high too
         self.select_index = min(self.select_index, len(settings.EDITOR_INFO))
 
+    def _menu_click(self, event):
+        """Handle menu clicks"""
+        # If the user clicked the moused and the cursor is on the menu, handle the click
+        if event.type == pygame.MOUSEBUTTONDOWN and self.menu.rect.collidepoint(mouse_pos()):
+            self.menu.handle_click()
 
     # Drawing
     def _update_surface(self):

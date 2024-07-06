@@ -21,7 +21,9 @@ class Settings:
             "SEA": "#92A9CE",
             "LINE": "black",
             "HORIZON": "#F5F1DE",
-            "HORIZON_TOP": "#D1AA9D"
+            "HORIZON_TOP": "#D1AA9D",
+            "BUTTON": "#43424F",
+            "BUTTON_LINE": "#EDECE4"
         }
 
         # Information for the map editor
