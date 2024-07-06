@@ -1,5 +1,6 @@
 import os.path
 import sys
+from random import choice, randint
 
 import pygame
 from pygame.math import Vector2 as vector
@@ -68,9 +69,12 @@ class Editor:
         self.clouds = []
         # Import cloud surfaces
         self.cloud_surfaces = utilities.import_folder("../graphics/clouds")
-        # Initialize the cloud timer
+        # Initialize the cloud timer, set it to spawn a cloud every 4 seconds
         self.cloud_timer = pygame.USEREVENT + 1
-        pygame.time.set_timer(self.cloud_timer, 2500)
+        pygame.time.set_timer(self.cloud_timer, 4000)
+
+        # Spawn some clouds at the beginning
+        self._start_clouds()
 
         # Object adding timer
         self.object_timer = Timer(400)
@@ -102,6 +106,10 @@ class Editor:
                 pygame.quit()
                 # Quit
                 sys.exit()
+
+            # Save the map when user clicks return (enter)
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                print(self._create_grid())
 
             # Check and handle panning inputs
             self._pan_input(event)
@@ -174,10 +182,11 @@ class Editor:
             # Save the selection index
             self.select_index = self.menu.handle_click(mouse_pos(), mouse_pressed())
 
-    def _get_current_cell(self):
+    def _get_current_cell(self, obj = None):
         """Get the current cell"""
         # Get the distance between the mouse position and the map origin
-        distance_origin = vector(mouse_pos()) - self.origin
+        distance_origin = (vector(mouse_pos())
+                           - self.origin) if not obj else vector(obj.origin_distance) - self.origin
 
         # If horizontal distance is higher than 0, just get its tile column
         if distance_origin.x > 0:
@@ -264,7 +273,7 @@ class Editor:
             cloud_y = pos_y - cloud["pos"][1]
 
             # Blit it
-            self.surface.blit(cloud["surface"], ())
+            self.surface.blit(cloud["surface"], (cloud_x, cloud_y))
 
     def _draw_lines(self):
         """Draw the tile lines"""
@@ -408,12 +417,97 @@ class Editor:
                     # Fix the tiling
                     self._check_neighbor_cells(current_cell)
 
+    def _create_grid(self):
+        """Create the map grid"""
+        # Clear the tile objects
+        for tile in self.map_data.values():
+            tile.objects = []
+
+        # Go through each of the objects that exist on the map
+        for obj in self.map_objects:
+            # Get the current cell
+            current_cell = self._get_current_cell()
+            # Get object's offset in comparison to the cell
+            offset = vector(obj.origin_distance) - (vector(current_cell) * settings.TILE_SIZE)
+
+            # If the cell has a tile
+            if current_cell in self.map_data:
+                self.map_data[current_cell].add_id(obj.tile_id, offset)
+            # Otherwise create one
+            else:
+                self.map_data[current_cell] = MapTile(obj.tile_id, offset)
+
+        # Calculate the grid offset
+        # Get the first tile, which is the left one, get the X-Axis value from it (tiles sorted by X value)
+        left = sorted(self.map_data.keys(), key=lambda tile: tile[0])[0][0]
+        # Get the first top tile Y-Axis position, sorted by Y value
+        top = sorted(self.map_data.keys(), key=lambda tile: tile[1])[0][1]
+
+        # Grid layers (ordered by the Z-value, ascending)
+        layers = {
+            "water": {},
+            "bg palms": {},
+            "terrain": {},
+            "enemies": {},
+            "coins": {},
+            "fg objects": {}
+        }
+
+        # Go through every map item
+        for pos, tile in self.map_data.items():
+            # Adjust positions to local one
+            adjusted_col = pos[0] - left
+            adjusted_row = pos[1] - top
+
+            # Change the positions from tiles into pixels
+            pos_x = adjusted_col * settings.TILE_SIZE
+            pos_y = adjusted_row * settings.TILE_SIZE
+
+            # Check if tile has water, if so get it with the bottom or top style
+            if tile.water:
+                layers["water"][(pos_x, pos_y)] = tile.get_water()
+
+            # If tile has terrain, get it with the neighbors
+            if tile.terrain:
+                layers["terrain"][(pos_x, pos_y)] = tile.get_terrain()
+
     def _create_clouds(self, event):
         """Create the clouds"""
         # If cloud cooldown passed
         if event.type == self.cloud_timer:
             # Choose a random cloud
-            
+            cloud_surface = choice(self.cloud_surfaces)
+            # Make some of the clouds two times bigger
+            if randint(0, 4) < 2:
+                cloud_surface = pygame.transform.scale2x(cloud_surface)
+
+            # Choose a random speed
+            speed = randint(20, 40)
+            # Choose a random position of the cloud, make them appear from the right side of the screen
+            pos = [randint(50, 100) + settings.WINDOW_WIDTH, randint(0, settings.WINDOW_HEIGHT)]
+
+            # Add it to the active clouds
+            self.clouds.append({"surface": cloud_surface, "pos": pos, "speed": speed})
+
+            # Remove the old clouds, that went beyond the visible surface
+            self.clouds = [cloud for cloud in self.clouds if cloud["pos"][0] > -450]
+
+    def _start_clouds(self):
+        """Make the clouds appear at the start"""
+        # Create 15 clouds at the start
+        for cloud_num in range(15):
+            # Create a cloud with random image, size
+            cloud = (pygame.transform.scale2x(choice(self.cloud_surfaces))
+                     if randint(0, 4) < 2
+                     else choice(self.cloud_surfaces))
+            # Choose a random position in the visible part of screen
+            cloud_pos = [randint(0, settings.WINDOW_WIDTH), randint(0, settings.WINDOW_HEIGHT)]
+            # Generate a random speed
+            speed = randint(20, 40)
+
+            # Create the cloud, add it to the current ones
+            self.clouds.append({"surface": cloud, "pos": cloud_pos, "speed": speed})
+
 
     def _drag_object(self, event):
         """Handle object dragging"""

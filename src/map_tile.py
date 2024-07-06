@@ -1,9 +1,11 @@
+from pygame.math import Vector2 as vector
+
 from src.settings import settings
 
 
 class MapTile:
     """A single map tile"""
-    def __init__(self, tile_id):
+    def __init__(self, tile_id, offset=vector()):
         """Initialize the tile"""
         # Terrain placed flag
         self.terrain = False
@@ -28,12 +30,12 @@ class MapTile:
         self.data = {key: value["style"] for key, value in settings.EDITOR_INFO.items()}
 
         # Add the tile ID
-        self.add_id(tile_id)
+        self.add_id(tile_id, offset)
 
         # Empty tile flag
         self.empty = False
 
-    def add_id(self, tile_id):
+    def add_id(self, tile_id, offset=vector()):
         """Add item's ID into map tile"""
         # Get the tile's style
         current_style = self.data[tile_id]
@@ -51,6 +53,12 @@ class MapTile:
         # If tile is an enemy, save the enemy id
         elif current_style == "enemy":
             self.enemy = tile_id
+
+        # Otherwise it is an object
+        else:
+            # If the object isn't added already, add it
+            if (tile_id, offset) not in self.objects:
+                self.objects.append((tile_id, offset))
 
     def remove_id(self, tile_id):
         """Remove item's ID from a tile in the map"""
