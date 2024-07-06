@@ -45,6 +45,11 @@ class Editor:
         # Object of the map (objects are off-grid tiles)
         self.map_objects = pygame.sprite.Group()
 
+        # Foreground objects
+        self.foreground = pygame.sprite.Group()
+        # Background objects
+        self.background = pygame.sprite.Group()
+
         # Land tile surfaces
         self.land_tiles = land_tiles
         # Import other assets
@@ -61,10 +66,11 @@ class Editor:
 
         # The player with ID 0
         MapObject((200, settings.WINDOW_HEIGHT / 2),
-                  self.animations[0]["frames"], 0, self.origin, self.map_objects)
+                  self.animations[0]["frames"], 0, self.origin, [self.map_objects, self.foreground])
         # Sky drag handle (ID: 1)
         self.sky_handle = MapObject((settings.WINDOW_WIDTH / 2, settings.WINDOW_HEIGHT / 2),
-                                    [self.sky_handle_surface], 1, self.origin, self.map_objects)
+                                    [self.sky_handle_surface], 1, self.origin,
+                                    [self.map_objects, self.background])
         # Active clouds
         self.clouds = []
         # Import cloud surfaces
@@ -308,6 +314,9 @@ class Editor:
 
     def _draw_map(self):
         """Draw the map"""
+        # Draw the background objects
+        self.background.draw(self.surface)
+
         # Go through each tile placed
         for cell_pos, tile in self.map_data.items():
             # Get its position in pixels
@@ -356,7 +365,9 @@ class Editor:
                                                          pos[1] + settings.TILE_SIZE))
                 # Blit the enemy
                 self.surface.blit(frames[frame], rect)
-        self.map_objects.draw(self.surface)
+
+        # Draw the foreground objects
+        self.foreground.draw(self.surface)
 
     def _map_add(self):
         """Add the item to the map"""
@@ -386,8 +397,17 @@ class Editor:
             else:
                 # Check for object placement cooldown, if it passed, place the object
                 if not self.object_timer.active:
+                    # Choose between background or foreground group
+                    group = [self.map_objects]
+                    # If object's type is palm background, add the background group
+                    if settings.EDITOR_INFO[self.select_index]["style"] == "palm_bg":
+                        group.append(self.background)
+                    # Otherwise add the foreground one
+                    else:
+                        group.append(self.foreground)
+
                     MapObject(mouse_pos(), self.animations[self.select_index]["frames"], self.select_index,
-                              self.origin, self.map_objects)
+                              self.origin, group)
                     # Activate the cooldown
                     self.object_timer.start()
 
@@ -465,11 +485,38 @@ class Editor:
 
             # Check if tile has water, if so get it with the bottom or top style
             if tile.water:
-                layers["water"][(pos_x, pos_y)] = tile.get_water()
+                layers["water"][(pos_x, pos_y)] = tile.get_water_type()
 
-            # If tile has terrain, get it with the neighbors
+            # If tile has terrain
             if tile.terrain:
-                layers["terrain"][(pos_x, pos_y)] = tile.get_terrain()
+                # If is in the land tiles, get it with its neighbors
+                if tile.get_terrain() in self.land_tiles:
+                    layers["terrain"][(pos_x, pos_y)] = tile.get_terrain()
+                # Otherwise just set it to default type
+                else:
+                    layers["terrain"][(pos_x, pos_y)] = 'X'
+
+            # If tile is a coin just set the tile as a coin (center its position)
+            if tile.coin:
+                layers["coins"][(pos_x + settings.TILE_SIZE // 2, pos_y + settings.TILE_SIZE // 2)] = tile.coin
+
+            # If there is an enemy, place it
+            if tile.enemy:
+                layers["enemies"][(pos_x, pos_y)] = tile.enemy
+
+            # If tile has objects
+            if tile.objects:
+                # Go through each of the object, while taking its offset
+                for obj, offset in tile.objects:
+                    # If object is a palm background, save it as it
+                    if obj in [item_id for item_id, item in settings.EDITOR_INFO.items()
+                               if item["style"] == "palm_bg"]:
+                        layers["bg palms"][(int(pos_x + offset.x), int(pos_y + offset.y))] = obj
+                    # Otherwise save it as palm foreground
+                    else:
+                        layers["fg objects"][(int(pos_x + offset.x), int(pos_y + offset.y))] = obj
+
+        return layers
 
     def _create_clouds(self, event):
         """Create the clouds"""

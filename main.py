@@ -7,6 +7,8 @@ from pygame.image import load
 from src.settings import settings
 from src.editor import Editor
 from src.utilities import utilities
+from src.level import Level
+from src.transition import Transition
 
 
 class Main:
@@ -33,31 +35,33 @@ class Main:
 
         # Level editor
         self.editor = Editor(self.land_tiles)
+        # Level itself
+        self.level = Level()
+
+        # Editor active flag
+        self.editor_on = True
+
+        # Transition between editor and the level
+        self.transition = Transition(self._toggle_editor)
 
     def run(self):
         """Run the game loop"""
         while True:
             # Delta time for FPS
             delta_time = self.clock.tick() / 1000
-            # Handle events
-            # self._get_events()
 
-            # Run the editor
-            self.editor.run(delta_time)
+            # Run the editor when it's active
+            if self.editor_on:
+                self.editor.run(delta_time)
+            # Otherwise run the level
+            else:
+                self.level.run(delta_time)
+
+            # Draw the transition effect
+            self.transition.display(delta_time)
 
             # Update the surface
             self._update_surface()
-
-    def _get_events(self):
-        """Get the input events"""
-        # Go through each event
-        for event in pygame.event.get():
-            # If user wants to quit, do it
-            if event.type == pygame.QUIT:
-                # Uninitialize pygame modules
-                pygame.quit()
-                # Quit
-                sys.exit()
 
     def _update_surface(self):
         """Update the main surface and draw everything onto it"""
@@ -67,6 +71,10 @@ class Main:
         """Import all general assets"""
         # Import land tiles
         self.land_tiles = utilities.import_folder_dict("../graphics/terrain/land")
+
+    def _toggle_editor(self):
+        """Toggle the editor"""
+        self.editor_on = not self.editor_on
 
 
 if __name__ == "__main__":

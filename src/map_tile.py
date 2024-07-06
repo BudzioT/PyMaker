@@ -86,3 +86,16 @@ class MapTile:
         # If there is nothing on the tile, set the empty flag
         if (not self.terrain) and (not self.water) and (not self.coin) and (not self.enemy):
             self.empty = True
+
+    def get_water_type(self):
+        """Get the water type"""
+        # If there is water on top of this one, return this as bottom
+        if self.water_on_top:
+            return "bottom"
+        # Otherwise return it as the top type
+        else:
+            return "top"
+
+    def get_terrain(self):
+        """Get the terrain with its neighbors"""
+        return ''.join(self.neighbor_terrain)
