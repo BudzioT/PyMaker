@@ -7,6 +7,7 @@ from pygame.mouse import get_pos as mouse_pos
 
 from src.settings import settings
 from src.menu import Menu
+from src.MapTile import MapTile
 
 
 class Editor:
@@ -140,7 +141,6 @@ class Editor:
         else:
             row = int(distance_origin.y / settings.TILE_SIZE) - 1
 
-        print(column, row)
         # Return the cell's position
         return column, row
 
@@ -148,6 +148,9 @@ class Editor:
     def _update_surface(self):
         """Update and draw everything onto the main surface"""
         self.surface.fill("white")
+
+        # Draw the map
+        self.draw_map()
 
         # Draw the tile lines
         self._draw_lines()
@@ -189,6 +192,38 @@ class Editor:
         # Blit the support lines onto the main surface
         self.surface.blit(self.support_surface, (0, 0))
 
+    def draw_map(self):
+        """Draw the map"""
+        # Go through each tile placed
+        for cell_pos, tile in self.map_data.items():
+            # Get its position in pixels
+            pos = self.origin + vector(cell_pos) * settings.TILE_SIZE
+
+            # If tile has water
+            if tile.water:
+                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
+                test_surface.fill("blue")
+                self.surface.blit(test_surface, pos)
+
+            # If it has terrain
+            if tile.terrain:
+                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
+                test_surface.fill("brown")
+                self.surface.blit(test_surface, pos)
+
+            # If it has a coin
+            if tile.coin:
+                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
+                test_surface.fill("yellow")
+                self.surface.blit(test_surface, pos)
+
+            # Otherwise if it has an enemy
+            if tile.enemy:
+                test_surface = pygame.Surface((settings.TILE_SIZE, settings.TILE_SIZE))
+                test_surface.fill("red")
+                self.surface.blit(test_surface, pos)
+
+
     def _map_add(self):
         """Add the item to the map"""
         # If user pressed the left mouse button but didn't click on the menu
@@ -198,13 +233,13 @@ class Editor:
 
             # If user didn't click on the same cell twice
             if current_cell != self.last_cell:
-                # Change the cell
+                # If there is something already, change the cell to the current ID
                 if current_cell in self.map_data:
-                    pass
-                # Add new cell to the map data
+                    self.map_data[current_cell].add_id(self.select_index)
+
+                # Otherwise add new cell to the map data
                 else:
-                    self.map_data[current_cell] = "Cell"
+                    self.map_data[current_cell] = MapTile(self.select_index)
+
                 # Save the current cell, as the last one
                 self.last_cell = current_cell
-
-            print(self.map_data)

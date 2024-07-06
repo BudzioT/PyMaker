@@ -6,9 +6,10 @@ from pygame.image import load
 
 from src.settings import settings
 from src.editor import Editor
+from src.utilities import utilities
 
 
-class Game:
+class Main:
     """Main game class"""
     def __init__(self):
         """Initialize the game"""
@@ -19,6 +20,9 @@ class Game:
         self.surface = pygame.display.set_mode((settings.WINDOW_WIDTH, settings.WINDOW_HEIGHT))
         # Set the game timer
         self.clock = pygame.time.Clock()
+
+        # Import the assets
+        self._import_asssets()
 
         # Load the cursor image
         cursor_img = load(os.path.join(settings.BASE_PATH, "../graphics/cursors/mouse.png")).convert_alpha()
@@ -59,7 +63,11 @@ class Game:
         """Update the main surface and draw everything onto it"""
         pygame.display.update()
 
+    def _import_asssets(self):
+        """Import all the assets"""
+        self.land_tiles = utilities.import_folder("../graphics/terrain/land")
+
 
 if __name__ == "__main__":
-    game = Game()
-    game.run()
+    main = Main()
+    main.run()
