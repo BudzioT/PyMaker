@@ -12,6 +12,7 @@ from src.menu import Menu
 from src.map_tile  import MapTile
 from src.utilities import utilities
 from src.map_object import MapObject
+from src.timer import Timer
 
 
 class Editor:
@@ -64,6 +65,9 @@ class Editor:
         self.sky_handle = MapObject((settings.WINDOW_WIDTH / 2, settings.WINDOW_HEIGHT / 2),
                                     [self.sky_handle_surface], 1, self.origin, self.map_objects)
 
+        # Object adding timer
+        self.object_timer = Timer(400)
+
     def run(self, delta_time):
         """Run the level editor"""
         # Run the event loop
@@ -73,6 +77,9 @@ class Editor:
         self._update_animations(delta_time)
         # Update the map objects
         self.map_objects.update(delta_time)
+
+        # Update the object timer
+        self.object_timer.update()
 
         # Update the surface
         self._update_surface()
@@ -193,6 +200,9 @@ class Editor:
         # Draw a circle
         pygame.draw.circle(self.surface, "red", self.origin, 10)
 
+        # If user want's to put something, draw a preview
+        self._show_preview()
+
         # Display the menu
         self.menu.display(self.select_index)
 
@@ -286,29 +296,45 @@ class Editor:
             # Get the current clicked cell
             current_cell = self._get_current_cell()
 
-            # Check if user is placing object or a tile
-            
+            # Check if user is placing a tile
+            if settings.EDITOR_INFO[self.select_index]["type"] == "tile":
+                # If user didn't click on the same cell twice
+                if current_cell != self.last_cell:
+                    # If there is something already, change the cell to the current ID
+                    if current_cell in self.map_data:
+                        self.map_data[current_cell].add_id(self.select_index)
 
-            # If user didn't click on the same cell twice
-            if current_cell != self.last_cell:
-                # If there is something already, change the cell to the current ID
-                if current_cell in self.map_data:
-                    self.map_data[current_cell].add_id(self.select_index)
+                    # Otherwise add new cell to the map data
+                    else:
+                        self.map_data[current_cell] = MapTile(self.select_index)
 
-                # Otherwise add new cell to the map data
-                else:
-                    self.map_data[current_cell] = MapTile(self.select_index)
+                    self._check_neighbor_cells(current_cell)
 
-                self._check_neighbor_cells(current_cell)
+                    # Save the current cell, as the last one
+                    self.last_cell = current_cell
 
-                # Save the current cell, as the last one
-                self.last_cell = current_cell
+            # Otherwise he's placing an object
+            else:
+                # Check for object placement cooldown, if it passed, place the object
+                if not self.object_timer.active:
+                    MapObject(mouse_pos(), self.animations[self.select_index]["frames"], self.select_index,
+                              self.origin, self.map_objects)
+                    # Activate the cooldown
+                    self.object_timer.start()
 
     def _map_remove(self):
-        """Remove a tile from the map"""
+        """Remove tile or an object from the map"""
         # Check if user right-clicked on a tile and not on the menu
         if mouse_pressed()[2] and not self.menu.rect.collidepoint(mouse_pos()):
-            # If there is any data in map
+            # Save the object that user points to
+            selected_object = self._object_pointed()
+            # Check if there was any
+            if selected_object:
+                # If the object wasn't the player or sky handler, delete it
+                if settings.EDITOR_INFO[selected_object.tile_id]["style"] not in ("sky", "player"):
+                    selected_object.kill()
+
+            # If there is any data in map, prepare to delete the object
             if self.map_data:
                 # Get the current cell and check if it exists in map data
                 current_cell = self._get_current_cell()
@@ -376,6 +402,48 @@ class Editor:
                         # Add its name to the current cell neighbors
                         self.map_data[cell].neighbor_terrain.append(name)
 
+    def _show_preview(self):
+        """Show preview of the placement of a tile and show which objects are draggable"""
+        # Check if user isn't in the menu
+        if not self.menu.rect.collidepoint(mouse_pos()):
+            # Get the object that user points to
+            selected_object = self._object_pointed()
+
+            # If the object exists
+            if selected_object:
+                # Get the object's rectangle inflated by 10 pixels
+                rect = selected_object.rect.inflate(10, 10)
+
+                # Width of lines
+                width = 3
+                # Size of lines
+                size = 15
+                # Color of them
+                color = "black"
+
+                # Draw the lines
+                # Bottom left line
+                pygame.draw.lines(self.surface, "black", False,
+                                  ((rect.left, rect.bottom - size),
+                                   rect.bottomleft, (rect.left + size, rect.bottom)), width)
+                # Top left line
+                pygame.draw.lines(self.surface, "black", False,
+                                  ((rect.left, rect.top + size),
+                                   rect.topleft, (rect.left + size, rect.top)), width)
+                # Bottom right line
+                pygame.draw.lines(self.surface, "black", False,
+                                  ((rect.right - size, rect.bottom),
+                                   rect.bottomright, (rect.right, rect.bottom - size)), width)
+                # Top right line
+                pygame.draw.lines(self.surface, "black", False,
+                                  ((rect.right - size, rect.top),
+                                   rect.topright, (rect.right, rect.top + size)), width)
+
+            # Otherwise display the preview of the tile
+            else:
+                # Get the ID's of tiles and objects and their type
+                type_dict = {item_id: item["type"] for item_id, item in settings.EDITOR_INFO}
+
     def _import_assets(self):
         """Import assets not loaded in the main file"""
         # Load the bottom part of water
@@ -400,6 +468,9 @@ class Editor:
                     "length": len(graphics)
                 }
 
+        # Previews dictionary
+        self.previews = {}
+
     def _update_animations(self, delta_time):
         """Update the animations"""
         # Go through each animation that is loaded
@@ -409,3 +480,11 @@ class Editor:
             # If the frame is too high, return it to the first one
             if item["frame"] >= item["length"]:
                 item["frame"] = 0
+
+    def _object_pointed(self):
+        """Check which object does the mouse points on"""
+        # Go through every object on the map
+        for obj in self.map_objects:
+            # Check for mouse collision with it, if there is one, remove it
+            if obj.rect.collidepoint(mouse_pos()):
+                return obj
