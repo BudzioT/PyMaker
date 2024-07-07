@@ -118,15 +118,15 @@ class Level:
                     Spikes(pos, assets["spikes"], [self.sprites, self.attack_sprites])
                 # Tooth enemy
                 elif data == 8:
-                    Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites])
+                    Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites], self.collision_sprites)
                 # Shell in the left direction (it isn't in attack sprites, because player can jump on it)
                 elif data == 9:
                     Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
-                          "left", assets["pearl"])
+                          "left", assets["pearl"], self.attack_sprites)
                 # Shell in the right direction
                 elif data == 10:
                     Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
-                          "right", assets["pearl"])
+                          "right", assets["pearl"], self.attack_sprites)
 
                 # Palms
                 # Small palm foreground
@@ -160,10 +160,10 @@ class Level:
                 elif data == 18:
                     AnimatedSprite(pos, assets["palms"]["right_bg"], self.sprites, settings.LAYERS_DEPTH["bg"])
 
-            # Go through each of the shell sprites
-            for shell in self.shell_sprites:
-                # Save the player in it
-                shell.player = self.player
+        # Go through each of the shell sprites
+        for shell in self.shell_sprites:
+            # Save the player in it
+            shell.player = self.player
 
     def _collect_coins(self):
         """Collect the coins by the player"""
