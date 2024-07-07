@@ -13,9 +13,11 @@ If you want to build it yourself:
 - Compile the main.py file, compiling other without it doesn't result in anything
 
 ## :camera:Screenshots
-- Game:<br>
+- Game:<br>![image](https://github.com/BudzioT/PyMaker/assets/145849460/0160de72-e618-402e-96fc-30ab237c0b53)
 
-- Editor:<br>
+
+- Editor:<br>![image](https://github.com/BudzioT/PyMaker/assets/145849460/cf7df29e-1359-487f-aaba-4eb024feb31e)
+
 
 
 ## :video_game: Controls
