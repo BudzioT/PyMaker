@@ -1,11 +1,12 @@
 import sys
+from random import choice, randint
 
 import pygame
 from pygame.math import Vector2 as vector
 
 from src.settings import settings
 from src.utilities import utilities
-from src.sprites import GenericSprite, Player, AnimatedSprite, Coin, Block
+from src.sprites import GenericSprite, Player, AnimatedSprite, Coin, Block, Cloud
 from src.particle import Particle
 from src.enemies import Spikes, Tooth, Shell
 from src.camera import CameraGroup
@@ -35,8 +36,24 @@ class Level:
         # Particle surface assets
         self.particle_assets = assets["particle"]
 
+        # Cloud surfaces
+        self.cloud_surfaces = assets["clouds"]
+        # Cloud appear timer
+        self.cloud_timer = pygame.USEREVENT + 2
+        pygame.time.set_timer(self.cloud_timer, 4000)
+
         # Build the level based off the grid
         self._build_level(grid, assets)
+
+        # Level position limits
+        self.level_limits = {
+            "left": -500,
+            # Get the right-most stile
+            "right": sorted(list(grid["terrain"].keys()), key=lambda pos: pos[0])[-1][0]
+        }
+
+        # Create some start clouds
+        self._start_clouds()
 
     def run(self, delta_time):
         """Run the game level"""
@@ -61,6 +78,10 @@ class Level:
             # If user clicks escape, switch to the editor
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 self.switch()
+
+            # If cloud appear cooldown has ended, spawn a new cloud
+            if event.type == self.cloud_timer:
+                self._create_clouds()
 
     def _update_pos(self, delta_time):
         """Update positions of elements"""
@@ -103,6 +124,10 @@ class Level:
                 # If layer's ID was 0, place the player
                 if data == 0:
                     self.player = Player(pos, assets["player"], self.sprites, self.collision_sprites)
+                # Set the horizon
+                elif data == 1:
+                    self.horizon_y = pos[1]
+                    self.sprites.horizon_y = pos[1]
 
                 # Generate the specific coins
                 # Gold
@@ -169,6 +194,41 @@ class Level:
         for shell in self.shell_sprites:
             # Save the player in it
             shell.player = self.player
+
+    def _create_clouds(self):
+        """Create the clouds"""
+        # Choose a random cloud surface
+        surface = choice(self.cloud_surfaces)
+        # Scale it times two randomly
+        if randint(0,5) > 3:
+            surface = pygame.transform.scale2x(surface)
+
+        # Cloud random starting position (check if user placed any tile, if not set starting X position to 500)
+        pos_x = self.level_limits["right"] + randint(100, 300) if self.level_limits["right"] else 500
+        pos_y = self.horizon_y - randint(-20, 600)
+
+        # Create the cloud
+        Cloud((pos_x, pos_y), surface, self.sprites, self.level_limits["left"])
+
+    def _start_clouds(self):
+        """Create some clouds at start of the level"""
+        # Create 30 clouds
+        for cloud_num in range(30):
+            # Randomly choose a cloud surface
+            surface = choice(self.cloud_surfaces)
+            # Sometimes scale it up
+            if randint(0, 5) > 3:
+                surface = pygame.transform.scale2x(surface)
+
+            # Get the random positions at the screen, depending on, if there was any tile placed
+            if self.level_limits["right"]:
+                pos_x = randint(self.level_limits["left"], self.level_limits["right"])
+            else:
+                pos_x = randint(self.level_limits["left"], 500)
+            pos_y = self.horizon_y - randint(-20, 600)
+
+            # Create the cloud
+            Cloud((pos_x, pos_y), surface, self.sprites, self.level_limits["left"])
 
     def _collect_coins(self):
         """Collect the coins by the player"""

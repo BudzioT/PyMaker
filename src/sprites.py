@@ -1,3 +1,5 @@
+from random import randint
+
 import pygame
 from pygame.math import Vector2 as vector
 
@@ -57,7 +59,7 @@ class Player(GenericSprite):
         self.hitbox = self.rect.inflate(-50, 0)
 
         # Player's invincibility time
-        self.dodge_time = Timer(300)
+        self.dodge_time = Timer(500)
 
     def update(self, delta_time):
         # Handle the input
@@ -278,3 +280,20 @@ class Coin(AnimatedSprite):
 
         # Update the rectangle to proper position (center)
         self.rect = self.image.get_rect(center=pos)
+
+
+class Cloud(GenericSprite):
+    """Cloud class"""
+    def __init__(self, pos, surface, group, dead_zone):
+        """Initialize the cloud"""
+        super().__init__(pos, surface, group, settings.LAYERS_DEPTH["clouds"])
+
+        # Cloud's position and a random speed
+        self.pos = vector(self.rect.topleft)
+        self.speed = randint(20, 30)
+
+    def update(self, delta_time):
+        """Update the cloud"""
+        # Update cloud's horizontal position
+        self.pos.x -= self.speed * delta_time
+        self.rect.x = round(self.pos.x)

@@ -233,9 +233,6 @@ class Pearl(GenericSprite):
         self.direction = direction
         self.speed = 150
 
-        print("Pearl position:", self.rect.topleft)  # Add this line
-        print("Pearl surface:", self.image)
-
         # Pearl duration time
         self.timer = Timer(6000)
         self.timer.start()
@@ -246,11 +243,8 @@ class Pearl(GenericSprite):
         self.pos.x += self.direction.x * self.speed * delta_time
         self.rect.x = round(self.pos.x)
 
-        print("UPDATE!!!")
-
         # Update the timer
         self.timer.update()
         # If the timer passed, kill the pearl
         if not self.timer.active:
             self.kill()
-            print("KILL")

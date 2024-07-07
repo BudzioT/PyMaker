@@ -102,6 +102,9 @@ class Main:
         for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/player")))[0][1]:
             self.player_assets[folder] = utilities.import_folder(f"../graphics/player/{folder}")
 
+        # Get the cloud's assets
+        self.clouds = utilities.import_folder(f"../graphics/clouds")
+
         # Palm assets dictionary
         self.palms = {}
         # Go through each of the palm folders and then import them
@@ -141,6 +144,9 @@ class Main:
                 "pearl": self.pearl,
                 # Player
                 "player": self.player_assets,
+
+                # Clouds
+                "clouds": self.clouds,
 
                 # All the palms
                 "palms": self.palms,
