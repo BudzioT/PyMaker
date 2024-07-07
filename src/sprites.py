@@ -6,7 +6,7 @@ from src.settings import settings
 
 class GenericSprite(pygame.sprite.Sprite):
     """Generic, normal sprite"""
-    def __init__(self, pos, surface, group):
+    def __init__(self, pos, surface, group, pos_z=settings.LAYERS_DEPTH["main"]):
         """Initialize the sprite"""
         super().__init__(group)
         # Get sprite image
@@ -14,13 +14,26 @@ class GenericSprite(pygame.sprite.Sprite):
         # Get the image rectangle and place it at the given position
         self.rect = self.image.get_rect(topleft=pos)
 
+        # Save the depth position
+        self.pos_z = pos_z
+
 
 class Player(GenericSprite):
     """Game's player"""
-    def __init__(self, pos, group, collision_sprites):
+    def __init__(self, pos, assets, group, collision_sprites):
         """Initialize the player"""
-        super().__init__(pos, pygame.Surface((80, 64)), group)
-        self.image.fill("red")
+        # Animation variables
+        self.frames = assets
+        self.frame = 0
+        # Player's current state
+        self.state = "idle"
+        # His orientation
+        self.orientation = "right"
+
+        # Get the player's current animation image based off the state and orientation
+        surface = self.frames[f"{self.state}_{self.orientation}"][self.frame]
+        # Initialize the parent class with it
+        super().__init__(pos, surface, group)
 
         # Player's direction
         self.direction = vector()
@@ -48,9 +61,13 @@ class Player(GenericSprite):
 
         # Let the player move
         self._move(delta_time)
-
         # Save the floor if player is standing on one
         self._check_floor()
+
+        # Check his state and update it
+        self._update_state()
+        # Animate him
+        self._animate(delta_time)
 
     def _input(self):
         """Check and handle the input"""
@@ -60,9 +77,13 @@ class Player(GenericSprite):
         # If player pressed right or D, set his direction to right
         if keys[pygame.K_RIGHT] or keys[pygame.K_d]:
             self.direction.x = 1
+            # Set his orientation to right too
+            self.orientation = "right"
         # Move to the left
         elif keys[pygame.K_LEFT] or keys[pygame.K_a]:
             self.direction.x = -1
+            # Set the orientation to left
+            self.orientation = "left"
         # Otherwise stay in-place
         else:
             self.direction.x = 0
@@ -138,13 +159,51 @@ class Player(GenericSprite):
 
     def _check_floor(self):
         """Check if player is on the floor"""
-        # Save the floor that player stands on
-        self.floor_rect = pygame.Rect(self.hitbox.bottomleft, (self.hitbox.width, 2))
+        # Get the floor rect of player (bottom part of him)
+        floor_rect = pygame.Rect(self.hitbox.bottomleft, (self.hitbox.width, 2))
+
+        # Get all the collision sprites, that he is on
+        floor_sprites = [sprite for sprite in self.collision_sprites if sprite.rect.colliderect(floor_rect)]
+        # Set the floor flag if there was any floor collision
+        self.floor = True if floor_sprites else False
+
+    def _animate(self, delta_time):
+        """Animate the player"""
+        # Get the current state animation frames
+        frames = self.frames[f"{self.state}_{self.orientation}"]
+
+        # Increase the current frame
+        self.frame += settings.ANIMATION_SPEED * delta_time
+
+        # Check and reset the frame if it was the last one
+        if self.frame >= len(frames):
+            self.frame = 0
+
+        # Update the current image
+        self.image = frames[int(self.frame)]
+
+    def _update_state(self):
+        """Get the state that player's in"""
+        # If player's direction goes up, set his state to jump
+        if self.direction.y < 0:
+            self.state = "jump"
+        # If player's direction pushes him down, set his state to fall
+        elif self.direction.y > 0.8:
+            self.state = "fall"
+
+        # Otherwise check the horizontal states
+        else:
+            # If player's moving set the state to run
+            if self.direction.x != 0:
+                self.state = "run"
+            # Otherwise set it to idle
+            else:
+                self.state = "idle"
 
 
 class AnimatedSprite(GenericSprite):
     """An animated sprite"""
-    def __init__(self, pos, assets, group):
+    def __init__(self, pos, assets, group, pos_z=settings.LAYERS_DEPTH["main"]):
         """Initialize the animated sprite"""
         # Get the animation surfaces
         self.frames = assets
@@ -152,7 +211,7 @@ class AnimatedSprite(GenericSprite):
         self.frame = 0
 
         # Initialize the GenericSprite with the current frame
-        super().__init__(pos, self.frames[self.frame], group)
+        super().__init__(pos, self.frames[self.frame], group, pos_z)
 
     def update(self, delta_time):
         """Update the sprite"""

@@ -106,5 +106,13 @@ class Settings:
             'H': (-1, -1)
         }
 
+        self.LAYERS_DEPTH = {
+            "clouds": 1,
+            "ocean": 2,
+            "bg": 3,
+            "water": 4,
+            "main": 5
+        }
+
 
 settings = Settings()

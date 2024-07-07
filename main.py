@@ -94,6 +94,13 @@ class Main:
         self.shell = {}
         for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/enemies/shell_left")))[0][1]:
             self.shell[folder] = utilities.import_folder(f"../graphics/enemies/shell_left/{folder}")
+        # Shell's bullets
+        self.pearl = load(os.path.join(settings.BASE_PATH, "../graphics/enemies/pearl/pearl.png")).convert_alpha()
+
+        # Import the player's assets
+        self.player_assets = {}
+        for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/player")))[0][1]:
+            self.player_assets[folder] = utilities.import_folder(f"../graphics/player/{folder}")
 
         # Palm assets dictionary
         self.palms = {}
@@ -131,6 +138,9 @@ class Main:
                 "spikes": self.spikes,
                 "tooth": self.tooth,
                 "shell": self.shell,
+                "pearl": self.pearl,
+                # Player
+                "player": self.player_assets,
 
                 # All the palms
                 "palms": self.palms,

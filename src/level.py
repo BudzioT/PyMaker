@@ -8,6 +8,7 @@ from src.utilities import utilities
 from src.sprites import GenericSprite, Player, AnimatedSprite, Coin, Block
 from src.particle import Particle
 from src.enemies import Spikes, Tooth, Shell
+from src.camera import CameraGroup
 
 
 class Level:
@@ -21,13 +22,15 @@ class Level:
         self.switch = switch
 
         # Group with all the sprites
-        self.sprites = pygame.sprite.Group()
+        self.sprites = CameraGroup()
         # Only coin sprites
         self.coin_sprites = pygame.sprite.Group()
         # Sprites that deal damage
         self.attack_sprites = pygame.sprite.Group()
         # Sprites that can collide
         self.collision_sprites = pygame.sprite.Group()
+        # Shell sprites
+        self.shell_sprites = pygame.sprite.Group()
 
         # Particle surface assets
         self.particle_assets = assets["particle"]
@@ -72,12 +75,8 @@ class Level:
         # Draw the sky
         self.surface.fill(settings.COLORS["SKY"])
         # Draw all the sprites
-        self.sprites.draw(self.surface)
-
-        # Draw the player's hitboxes
-        pygame.draw.rect(self.surface, "yellow", self.player.hitbox)
-        # Draw floor collision box
-        pygame.draw.rect(self.surface, "pink", self.player.floor_rect)
+        # self.sprites.draw(self.surface)
+        self.sprites.custom_draw(self.player)
 
     def _build_level(self, grid, assets):
         """Build the level based off the grid using the given assets"""
@@ -93,14 +92,14 @@ class Level:
                 if layer_name == "water":
                     # If the tile is top one, create the water top tile with animation
                     if data == "top":
-                        AnimatedSprite(pos, assets["water_top"], self.sprites)
+                        AnimatedSprite(pos, assets["water_top"], self.sprites, settings.LAYERS_DEPTH["water"])
                     # Otherwise create the bottom, plain one
                     else:
-                        GenericSprite(pos, assets["water_bottom"], self.sprites)
+                        GenericSprite(pos, assets["water_bottom"], self.sprites, settings.LAYERS_DEPTH["water"])
 
                 # If layer's ID was 0, place the player
                 if data == 0:
-                    self.player = Player(pos, self.sprites, self.collision_sprites)
+                    self.player = Player(pos, assets["player"], self.sprites, self.collision_sprites)
 
                 # Generate the specific coins
                 # Gold
@@ -122,10 +121,12 @@ class Level:
                     Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites])
                 # Shell in the left direction (it isn't in attack sprites, because player can jump on it)
                 elif data == 9:
-                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites], "left")
+                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
+                          "left", assets["pearl"])
                 # Shell in the right direction
                 elif data == 10:
-                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites], "right")
+                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
+                          "right", assets["pearl"])
 
                 # Palms
                 # Small palm foreground
@@ -145,18 +146,24 @@ class Level:
                 elif data == 14:
                     AnimatedSprite(pos, assets["palms"]["right_fg"], self.sprites)
                     Block(pos + vector(50, 0), (77, 50), self.collision_sprites)
+
                 # Small palm background
                 elif data == 15:
-                    AnimatedSprite(pos, assets["palms"]["small_bg"], self.sprites)
+                    AnimatedSprite(pos, assets["palms"]["small_bg"], self.sprites, settings.LAYERS_DEPTH["bg"])
                 # Large background
                 elif data == 16:
-                    AnimatedSprite(pos, assets["palms"]["large_bg"], self.sprites)
+                    AnimatedSprite(pos, assets["palms"]["large_bg"], self.sprites, settings.LAYERS_DEPTH["bg"])
                 # Left background
                 elif data == 17:
-                    AnimatedSprite(pos, assets["palms"]["left_bg"], self.sprites)
+                    AnimatedSprite(pos, assets["palms"]["left_bg"], self.sprites, settings.LAYERS_DEPTH["bg"])
                 # Right background
                 elif data == 18:
-                    AnimatedSprite(pos, assets["palms"]["right_bg"], self.sprites)
+                    AnimatedSprite(pos, assets["palms"]["right_bg"], self.sprites, settings.LAYERS_DEPTH["bg"])
+
+            # Go through each of the shell sprites
+            for shell in self.shell_sprites:
+                # Save the player in it
+                shell.player = self.player
 
     def _collect_coins(self):
         """Collect the coins by the player"""
