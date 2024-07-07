@@ -2,6 +2,7 @@ import pygame
 from pygame.math import Vector2 as vector
 
 from src.settings import settings
+from src.timer import Timer
 
 
 class GenericSprite(pygame.sprite.Sprite):
@@ -35,6 +36,9 @@ class Player(GenericSprite):
         # Initialize the parent class with it
         super().__init__(pos, surface, group)
 
+        # Create mask
+        self.mask = pygame.mask.from_surface(self.image)
+
         # Player's direction
         self.direction = vector()
         # His position
@@ -52,12 +56,18 @@ class Player(GenericSprite):
         # Player's hitboxes
         self.hitbox = self.rect.inflate(-50, 0)
 
+        # Player's invincibility time
+        self.dodge_time = Timer(300)
+
     def update(self, delta_time):
         # Handle the input
         self._input()
 
         # Apply gravity to the player
         self._apply_gravity(delta_time)
+
+        # Update the invincibility timer
+        self.dodge_time.update()
 
         # Let the player move
         self._move(delta_time)
@@ -182,6 +192,15 @@ class Player(GenericSprite):
         # Update the current image
         self.image = frames[int(self.frame)]
 
+        # Update the mask
+        self.mask = pygame.mask.from_surface(self.image)
+
+        # If player is invincible
+        if self.dodge_time.active:
+            surface = self.mask.to_surface()
+            surface.set_colorkey("black")
+            self.image = surface
+
     def _update_state(self):
         """Get the state that player's in"""
         # If player's direction goes up, set his state to jump
@@ -199,6 +218,12 @@ class Player(GenericSprite):
             # Otherwise set it to idle
             else:
                 self.state = "idle"
+
+    def damage(self):
+        """Damage the player"""
+        if not self.dodge_time.active:
+            self.dodge_time.start()
+            self.direction.y -= 1.5
 
 
 class AnimatedSprite(GenericSprite):

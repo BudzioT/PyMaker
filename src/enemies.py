@@ -13,6 +13,8 @@ class Spikes(GenericSprite):
     def __init__(self, pos, assets, group):
         """Initialize the spikes"""
         super().__init__(pos, assets, group)
+        # Set the mask for precise collisions
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class Tooth(GenericSprite):
@@ -23,8 +25,11 @@ class Tooth(GenericSprite):
         self.frames = assets
         self.frame = 0
 
-        # Direction of the enemy
-        self.orientation = "right"
+        # Set tooth's direction to a random one
+        self.direction = vector(choice((1, -1)), 0)
+
+        # Create the orientation based off the direction
+        self.orientation = "left" if self.direction.x < 0 else "right"
 
         # Sprites that he can collide with
         self.collision_sprites = collision_sprites
@@ -35,14 +40,82 @@ class Tooth(GenericSprite):
         # Initialize generic sprite with first frame of run animation
         super().__init__(pos, surface, group)
 
+        # Assign a mask
+        self.mask = pygame.mask.from_surface(self.image)
+
         # Place the enemy on the ground
         self.rect.bottom = self.rect.top + settings.TILE_SIZE
 
-        # Set his direction to random one
-        self.direction = vector(choice((1, -1)), 0)
         # Set his position and speed
         self.pos = vector(self.rect.topleft)
         self.speed = 120
+
+        # If tooth isn't on the ground at the start, destroy him
+        if not[sprite for sprite in collision_sprites
+               if sprite.rect.collidepoint(self.rect.midbottom + vector(0, 10))]:
+            self.kill()
+
+    def update(self, delta_time):
+        """Update the tooth enemy"""
+        # Run the animation
+        self._animate(delta_time)
+
+        # Move the tooth enemy
+        self._move(delta_time)
+
+    def _animate(self, delta_time):
+        """Animate the tooth enemy"""
+        # Get the run animation frames
+        frames = self.frames[f"run_{self.orientation}"]
+
+        # Increase the current frame
+        self.frame += settings.ANIMATION_SPEED * delta_time
+
+        # Make sure it is in range
+        if self.frame >= len(frames):
+            self.frame = 0
+
+        # Set the image to the current frame one
+        self.image = frames[int(self.frame)]
+
+        # Update the mask
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def _move(self, delta_time):
+        """Move the tooth enemy"""
+        # Get the near gap locations of the enemy
+        left_gap = self.rect.bottomleft + vector(-1, 0)
+        right_gap = self.rect.bottomright + vector(1, 0)
+        # Get the location of blocks near the enemy
+        left_block = self.rect.midleft + vector(-1, 0)
+        right_block = self.rect.midright + vector(1, 0)
+
+        # If the enemy is moving right
+        if self.direction.x > 0:
+            # Check for collisions between the floor and right side of the enemy
+            floors = [sprite for sprite in self.collision_sprites if sprite.rect.collidepoint(right_gap)]
+            # Check for collisions with the right wall
+            walls = [sprite for sprite in self.collision_sprites if sprite.rect.collidepoint(right_block)]
+            print(floors, walls)
+            # If enemy touches the wall, or there isn't any floor on the right side of him
+            if (not floors) or walls:
+                # Change the enemy's direction and orientation
+                self.direction.x *= -1
+                self.orientation = "left"
+
+        # If the enemy is moving left
+        if self.direction.x < 0:
+            # Check the left wall and floor collisions
+            floors = [sprite for sprite in self.collision_sprites if sprite.rect.collidepoint(left_gap)]
+            walls = [sprite for sprite in self.collision_sprites if sprite.rect.collidepoint(left_block)]
+
+            # If enemy touches a left wall or there is a gap, change direction and orientation
+            if (not floors) or walls:
+                self.direction.x *= -1
+                self.orientation = "right"
+
+        self.pos.x += self.direction.x * self.speed * delta_time
+        self.rect.x = round(self.pos.x)
 
 
 class Shell(GenericSprite):
@@ -71,9 +144,12 @@ class Shell(GenericSprite):
         # Shoot flag
         self.shoot = False
         # Its cooldown
-        self.shoot_cooldown = Timer(2000)
+        self.shoot_cooldown = Timer(4000)
+
         # Damage sprite for making the pearl attack the player
         self.damage_sprites = damage_group
+        # Sprites
+        self.sprites = group[0]
 
         # Initialize the generic sprite with first frame of idle animation
         super().__init__(pos, self.frames[self.state][self.frame], group)
@@ -127,12 +203,12 @@ class Shell(GenericSprite):
             self.shoot = True
             # Create the pearl with specified direction, starting at the center of the shell
             Pearl(self.rect.center + pearl_offset, self.pearl_surface,
-                  [self.damage_sprites, self.groups()[0]], pearl_direction)
+                  [self.sprites, self.damage_sprites], pearl_direction)
 
     def _update_state(self):
         """Update the shell's state"""
         # If player is close enough to the shell
-        if vector(self.player.rect.center).distance_to(vector(self.rect.center)) < 485:
+        if vector(self.player.rect.center).distance_to(vector(self.rect.center)) < 550:
             # If the shell can shoot, do set it's state to attack
             if not self.shoot_cooldown.active:
                 self.state = "attack"
@@ -148,14 +224,20 @@ class Pearl(GenericSprite):
         """Initialize the pearl"""
         super().__init__(pos, surface, group)
 
+        # Add a mask
+        self.mask = pygame.mask.from_surface(self.image)
+
         # Pearl position
         self.pos = vector(self.rect.topleft)
         # Its direction and speed
         self.direction = direction
         self.speed = 150
 
+        print("Pearl position:", self.rect.topleft)  # Add this line
+        print("Pearl surface:", self.image)
+
         # Pearl duration time
-        self.timer = Timer(7000)
+        self.timer = Timer(6000)
         self.timer.start()
 
     def update(self, delta_time):
@@ -164,8 +246,11 @@ class Pearl(GenericSprite):
         self.pos.x += self.direction.x * self.speed * delta_time
         self.rect.x = round(self.pos.x)
 
+        print("UPDATE!!!")
+
         # Update the timer
         self.timer.update()
         # If the timer passed, kill the pearl
         if not self.timer.active:
             self.kill()
+            print("KILL")

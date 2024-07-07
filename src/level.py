@@ -67,6 +67,9 @@ class Level:
         # Update the player's position
         self.sprites.update(delta_time)
 
+        # Check and handle player's damage
+        self._damage()
+
         # Make the player collect coins
         self._collect_coins()
 
@@ -121,10 +124,12 @@ class Level:
                     Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites], self.collision_sprites)
                 # Shell in the left direction (it isn't in attack sprites, because player can jump on it)
                 elif data == 9:
+                    print(pos)
                     Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
                           "left", assets["pearl"], self.attack_sprites)
                 # Shell in the right direction
                 elif data == 10:
+                    print(pos)
                     Shell(pos, assets["shell"], [self.sprites, self.collision_sprites, self.shell_sprites],
                           "right", assets["pearl"], self.attack_sprites)
 
@@ -173,3 +178,11 @@ class Level:
         # Make some particles
         for coin in collided_coins:
             Particle(coin.rect.center, self.particle_assets, self.sprites)
+
+    def _damage(self):
+        """Damage the player if needed"""
+        # Check for collisions with attack sprites and the player
+        collisions = pygame.sprite.spritecollide(self.player, self.attack_sprites, False,
+                                                 pygame.sprite.collide_mask)
+        if collisions:
+            self.player.damage()
