@@ -74,6 +74,11 @@ class Level:
         # Draw all the sprites
         self.sprites.draw(self.surface)
 
+        # Draw the player's hitboxes
+        pygame.draw.rect(self.surface, "yellow", self.player.hitbox)
+        # Draw floor collision box
+        pygame.draw.rect(self.surface, "pink", self.player.floor_rect)
+
     def _build_level(self, grid, assets):
         """Build the level based off the grid using the given assets"""
         # Go through every single one of grid layers
@@ -82,7 +87,7 @@ class Level:
             for pos, data in layer.items():
                 # If this layer is terrain, create a sprite with land at saved position
                 if layer_name == "terrain":
-                    GenericSprite(pos, assets["land"][data], self.sprites)
+                    GenericSprite(pos, assets["land"][data], [self.sprites, self.collision_sprites])
 
                 # Check if layer is water one
                 if layer_name == "water":
@@ -95,7 +100,7 @@ class Level:
 
                 # If layer's ID was 0, place the player
                 if data == 0:
-                    self.player = Player(pos, self.sprites)
+                    self.player = Player(pos, self.sprites, self.collision_sprites)
 
                 # Generate the specific coins
                 # Gold
@@ -117,24 +122,29 @@ class Level:
                     Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites])
                 # Shell in the left direction (it isn't in attack sprites, because player can jump on it)
                 elif data == 9:
-                    Shell(pos, assets["shell"], self.sprites, "left")
+                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites], "left")
                 # Shell in the right direction
                 elif data == 10:
-                    Shell(pos, assets["shell"], self.sprites, "right")
+                    Shell(pos, assets["shell"], [self.sprites, self.collision_sprites], "right")
 
                 # Palms
                 # Small palm foreground
                 elif data == 11:
                     AnimatedSprite(pos, assets["palms"]["small_fg"], self.sprites)
+                    # Create a block that player can stand on (player should be able to stand on leafs)
+                    Block(pos, (77, 50), self.collision_sprites)
                 # Large palm foreground
                 elif data == 12:
                     AnimatedSprite(pos, assets["palms"]["large_fg"], self.sprites)
+                    Block(pos, (77, 50), self.collision_sprites)
                 # Left foreground
                 elif data == 13:
                     AnimatedSprite(pos, assets["palms"]["left_fg"], self.sprites)
+                    Block(pos, (77, 50), self.collision_sprites)
                 # Right foreground
                 elif data == 14:
                     AnimatedSprite(pos, assets["palms"]["right_fg"], self.sprites)
+                    Block(pos + vector(50, 0), (77, 50), self.collision_sprites)
                 # Small palm background
                 elif data == 15:
                     AnimatedSprite(pos, assets["palms"]["small_bg"], self.sprites)
@@ -147,7 +157,6 @@ class Level:
                 # Right background
                 elif data == 18:
                     AnimatedSprite(pos, assets["palms"]["right_bg"], self.sprites)
-
 
     def _collect_coins(self):
         """Collect the coins by the player"""

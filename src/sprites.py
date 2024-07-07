@@ -17,24 +17,40 @@ class GenericSprite(pygame.sprite.Sprite):
 
 class Player(GenericSprite):
     """Game's player"""
-    def __init__(self, pos, group):
+    def __init__(self, pos, group, collision_sprites):
         """Initialize the player"""
-        super().__init__(pos, pygame.Surface((32, 64)), group)
+        super().__init__(pos, pygame.Surface((80, 64)), group)
         self.image.fill("red")
 
         # Player's direction
         self.direction = vector()
         # His position
-        self.pos = vector(self.rect.topleft)
+        self.pos = vector(self.rect.center)
         # Speed
         self.speed = 300
+
+        # Gravity
+        self.gravity = 4
+        # Player on floor flag
+        self.floor = False
+
+        # Sprites that collide with player
+        self.collision_sprites = collision_sprites
+        # Player's hitboxes
+        self.hitbox = self.rect.inflate(-50, 0)
 
     def update(self, delta_time):
         # Handle the input
         self._input()
 
+        # Apply gravity to the player
+        self._apply_gravity(delta_time)
+
         # Let the player move
         self._move(delta_time)
+
+        # Save the floor if player is standing on one
+        self._check_floor()
 
     def _input(self):
         """Check and handle the input"""
@@ -51,13 +67,79 @@ class Player(GenericSprite):
         else:
             self.direction.x = 0
 
+        # If player wants to jump and is on the floor
+        if (keys[pygame.K_UP] or keys[pygame.K_w] or keys[pygame.K_SPACE]) and self.floor:
+            # Increase the direction to the top
+            self.direction.y = -2
+
     def _move(self, delta_time):
         """Move the player"""
-        # Update player's position
-        self.pos += self.direction * self.speed * delta_time
+        # Update player's horizontal position
+        self.pos.x += self.direction.x * self.speed * delta_time
+        # Move the hitboxes, round for float precision
+        self.hitbox.centerx = round(self.pos.x)
+        # Update the player's rect based off hitboxes
+        self.rect.centerx = self.hitbox.centerx
 
-        # Update player's rectangle, round it for the speed to count precisely
-        self.rect.topleft = (round(self.pos.x), round(self.pos.y))
+        # Check for horizontal collisions
+        self._collision("horizontal")
+
+        # Handle player's vertical movement
+        self.pos.y += self.direction.y * self.speed * delta_time
+        self.hitbox.centery = round(self.pos.y)
+        self.rect.centery = self.hitbox.centery
+
+        # Check for vertical collisions
+        self._collision("vertical")
+
+    def _collision(self, direction):
+        """Check for collisions and handle them"""
+        # Check all the collisions sprites
+        for sprite in self.collision_sprites:
+            # Find out if player collides with this sprite
+            if sprite.rect.colliderect(self.hitbox):
+                # If he collides in horizontal direction, handle it
+                if direction == "horizontal":
+                    # If player was moving right, hug him to the left part of collider
+                    if self.direction.x > 0:
+                        self.hitbox.right = sprite.rect.left
+                    # If player was moving left, hug him to the right side
+                    elif self.direction.x < 0:
+                        self.hitbox.left = sprite.rect.right
+
+                    # Update player's rectangle based off hitboxes
+                    self.rect.centerx = self.hitbox.centerx
+                    # Update player's position
+                    self.pos.x = self.hitbox.centerx
+
+                # Handle vertical collisions
+                else:
+                    # If player moved up, don't allow him to pass through the top block
+                    if self.direction.y < 0:
+                        self.hitbox.top = sprite.rect.bottom
+                    # If player was falling, place him on the ground
+                    if self.direction.y > 0:
+                        self.hitbox.bottom = sprite.rect.top
+
+                    # Update rectangle based off hitboxes
+                    self.rect.centery = self.hitbox.centery
+                    # Update the position
+                    self.pos.y = self.hitbox.centery
+
+                    # Reset the gravity force applied to the player
+                    self.direction.y = 0
+
+    def _apply_gravity(self, delta_time):
+        """Apply gravity to the player"""
+        # Apply gravity to the player's direction
+        self.direction.y += self.gravity * delta_time
+        # Make the player fall
+        self.rect.y += self.direction.y
+
+    def _check_floor(self):
+        """Check if player is on the floor"""
+        # Save the floor that player stands on
+        self.floor_rect = pygame.Rect(self.hitbox.bottomleft, (self.hitbox.width, 2))
 
 
 class AnimatedSprite(GenericSprite):
