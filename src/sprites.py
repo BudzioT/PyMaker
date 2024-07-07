@@ -90,6 +90,17 @@ class AnimatedSprite(GenericSprite):
         self.image = self.frames[int(self.frame)]
 
 
+class Block(GenericSprite):
+    """Block that player can walk on"""
+    def __init__(self, pos, size, group):
+        """Initialize the block"""
+        # Create the block's surface
+        surface = pygame.Surface(size)
+
+        # Initialize the parent class
+        super().__init__(pos, surface, group)
+
+
 class Coin(AnimatedSprite):
     """Certain type of coin"""
     def __init__(self, pos, assets, group, coin_type):

@@ -80,13 +80,27 @@ class Main:
         self.silver_coin = utilities.import_folder("../graphics/items/silver")
         self.diamond_coin = utilities.import_folder("../graphics/items/diamond")
 
+        # Import enemies
+        # Spikes
+        self.spikes = (load(os.path.join(settings.BASE_PATH, "../graphics/enemies/spikes/spikes.png"))
+                       .convert_alpha())
+        # Get all the tooth assets
+        self.tooth = {}
+        for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/enemies/tooth")))[0][1]:
+            # Import the tooth enemy and add it to the dictionary
+            self.tooth[folder] = utilities.import_folder(f"../graphics/enemies/tooth/{folder}")
+
+        # Get shells assets (only for the left one, to get the right one just flip it)
+        self.shell = {}
+        for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/enemies/shell_left")))[0][1]:
+            self.shell[folder] = utilities.import_folder(f"../graphics/enemies/shell_left/{folder}")
+
         # Palm assets dictionary
         self.palms = {}
         # Go through each of the palm folders and then import them
         for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/terrain/palm")))[0][1]:
             # Import the palm, add it to the dictionary
             self.palms[folder] = utilities.import_folder(f"../graphics/terrain/palm/{folder}")
-        print(self.palms)
 
         # Import the particles
         self.particle = utilities.import_folder("../graphics/items/particle")
@@ -112,6 +126,11 @@ class Main:
                 "gold_coin": self.gold_coin,
                 "silver_coin": self.silver_coin,
                 "diamond_coin": self.diamond_coin,
+
+                # Enemies
+                "spikes": self.spikes,
+                "tooth": self.tooth,
+                "shell": self.shell,
 
                 # All the palms
                 "palms": self.palms,

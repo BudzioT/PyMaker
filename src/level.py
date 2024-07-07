@@ -5,8 +5,9 @@ from pygame.math import Vector2 as vector
 
 from src.settings import settings
 from src.utilities import utilities
-from src.sprites import GenericSprite, Player, AnimatedSprite, Coin
+from src.sprites import GenericSprite, Player, AnimatedSprite, Coin, Block
 from src.particle import Particle
+from src.enemies import Spikes, Tooth, Shell
 
 
 class Level:
@@ -23,6 +24,10 @@ class Level:
         self.sprites = pygame.sprite.Group()
         # Only coin sprites
         self.coin_sprites = pygame.sprite.Group()
+        # Sprites that deal damage
+        self.attack_sprites = pygame.sprite.Group()
+        # Sprites that can collide
+        self.collision_sprites = pygame.sprite.Group()
 
         # Particle surface assets
         self.particle_assets = assets["particle"]
@@ -103,12 +108,46 @@ class Level:
                 elif data == 6:
                     Coin(pos, assets["diamond_coin"], [self.sprites, self.coin_sprites], "diamond")
 
+                # Enemies
+                # Spikes
+                elif data == 7:
+                    Spikes(pos, assets["spikes"], [self.sprites, self.attack_sprites])
+                # Tooth enemy
+                elif data == 8:
+                    Tooth(pos, assets["tooth"], [self.sprites, self.attack_sprites])
+                # Shell in the left direction (it isn't in attack sprites, because player can jump on it)
+                elif data == 9:
+                    Shell(pos, assets["shell"], self.sprites, "left")
+                # Shell in the right direction
+                elif data == 10:
+                    Shell(pos, assets["shell"], self.sprites, "right")
+
+                # Palms
                 # Small palm foreground
                 elif data == 11:
                     AnimatedSprite(pos, assets["palms"]["small_fg"], self.sprites)
                 # Large palm foreground
                 elif data == 12:
-                    
+                    AnimatedSprite(pos, assets["palms"]["large_fg"], self.sprites)
+                # Left foreground
+                elif data == 13:
+                    AnimatedSprite(pos, assets["palms"]["left_fg"], self.sprites)
+                # Right foreground
+                elif data == 14:
+                    AnimatedSprite(pos, assets["palms"]["right_fg"], self.sprites)
+                # Small palm background
+                elif data == 15:
+                    AnimatedSprite(pos, assets["palms"]["small_bg"], self.sprites)
+                # Large background
+                elif data == 16:
+                    AnimatedSprite(pos, assets["palms"]["large_bg"], self.sprites)
+                # Left background
+                elif data == 17:
+                    AnimatedSprite(pos, assets["palms"]["left_bg"], self.sprites)
+                # Right background
+                elif data == 18:
+                    AnimatedSprite(pos, assets["palms"]["right_bg"], self.sprites)
+
 
     def _collect_coins(self):
         """Collect the coins by the player"""
