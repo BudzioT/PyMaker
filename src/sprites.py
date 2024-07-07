@@ -1,6 +1,8 @@
 import pygame
 from pygame.math import Vector2 as vector
 
+from src.settings import settings
+
 
 class GenericSprite(pygame.sprite.Sprite):
     """Generic, normal sprite"""
@@ -56,3 +58,46 @@ class Player(GenericSprite):
 
         # Update player's rectangle, round it for the speed to count precisely
         self.rect.topleft = (round(self.pos.x), round(self.pos.y))
+
+
+class AnimatedSprite(GenericSprite):
+    """An animated sprite"""
+    def __init__(self, pos, assets, group):
+        """Initialize the animated sprite"""
+        # Get the animation surfaces
+        self.frames = assets
+        # Current frame
+        self.frame = 0
+
+        # Initialize the GenericSprite with the current frame
+        super().__init__(pos, self.frames[self.frame], group)
+
+    def update(self, delta_time):
+        """Update the sprite"""
+        # Animate it
+        self.animate(delta_time)
+
+    def animate(self, delta_time):
+        """Animate the sprite"""
+        # Increase the frame by the speed
+        self.frame += settings.ANIMATION_SPEED * delta_time
+
+        # If frame exceeds the frames limit, reset it
+        if self.frame >= len(self.frames):
+            self.frame = 0
+
+        # Set the current frame as the image
+        self.image = self.frames[int(self.frame)]
+
+
+class Coin(AnimatedSprite):
+    """Certain type of coin"""
+    def __init__(self, pos, assets, group, coin_type):
+        """Initialize the coin"""
+        super().__init__(pos, assets, group)
+
+        # Get the coin type
+        self.coin_type = coin_type
+
+        # Update the rectangle to proper position (center)
+        self.rect = self.image.get_rect(center=pos)

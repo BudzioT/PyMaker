@@ -75,6 +75,22 @@ class Main:
         # Get the entire water animation
         self.water_top = utilities.import_folder("../graphics/terrain/water/animation")
 
+        # Import every coin graphic
+        self.gold_coin = utilities.import_folder("../graphics/items/gold")
+        self.silver_coin = utilities.import_folder("../graphics/items/silver")
+        self.diamond_coin = utilities.import_folder("../graphics/items/diamond")
+
+        # Palm assets dictionary
+        self.palms = {}
+        # Go through each of the palm folders and then import them
+        for folder in list(os.walk(os.path.join(settings.BASE_PATH, "../graphics/terrain/palm")))[0][1]:
+            # Import the palm, add it to the dictionary
+            self.palms[folder] = utilities.import_folder(f"../graphics/terrain/palm/{folder}")
+        print(self.palms)
+
+        # Import the particles
+        self.particle = utilities.import_folder("../graphics/items/particle")
+
     def _toggle_editor(self):
         """Toggle the editor"""
         self.editor_on = not self.editor_on
@@ -87,9 +103,21 @@ class Main:
         # If a grid exists
         if grid:
             self.level = Level(grid, self._switch, {
+                # Terrains
                 "land": self.land_tiles,
                 "water_bottom": self.water_bottom,
-                "water_top": self.water_top
+                "water_top": self.water_top,
+
+                # Coins
+                "gold_coin": self.gold_coin,
+                "silver_coin": self.silver_coin,
+                "diamond_coin": self.diamond_coin,
+
+                # All the palms
+                "palms": self.palms,
+
+                # Particles
+                "particle": self.particle
             })
 
 

@@ -5,8 +5,8 @@ from pygame.math import Vector2 as vector
 
 from src.settings import settings
 from src.utilities import utilities
-from src.sprites import GenericSprite
-from src.sprites import Player
+from src.sprites import GenericSprite, Player, AnimatedSprite, Coin
+from src.particle import Particle
 
 
 class Level:
@@ -21,6 +21,11 @@ class Level:
 
         # Group with all the sprites
         self.sprites = pygame.sprite.Group()
+        # Only coin sprites
+        self.coin_sprites = pygame.sprite.Group()
+
+        # Particle surface assets
+        self.particle_assets = assets["particle"]
 
         # Build the level based off the grid
         self._build_level(grid, assets)
@@ -54,6 +59,9 @@ class Level:
         # Update the player's position
         self.sprites.update(delta_time)
 
+        # Make the player collect coins
+        self._collect_coins()
+
     def _update_surface(self):
         """Update the surface"""
         # Draw the sky
@@ -75,7 +83,7 @@ class Level:
                 if layer_name == "water":
                     # If the tile is top one, create the water top tile with animation
                     if data == "top":
-                        pass
+                        AnimatedSprite(pos, assets["water_top"], self.sprites)
                     # Otherwise create the bottom, plain one
                     else:
                         GenericSprite(pos, assets["water_bottom"], self.sprites)
@@ -83,3 +91,30 @@ class Level:
                 # If layer's ID was 0, place the player
                 if data == 0:
                     self.player = Player(pos, self.sprites)
+
+                # Generate the specific coins
+                # Gold
+                elif data == 4:
+                    Coin(pos, assets["gold_coin"], [self.sprites, self.coin_sprites], "gold")
+                # Silver
+                elif data == 5:
+                    Coin(pos, assets["silver_coin"], [self.sprites, self.coin_sprites], "silver")
+                # Diamond
+                elif data == 6:
+                    Coin(pos, assets["diamond_coin"], [self.sprites, self.coin_sprites], "diamond")
+
+                # Small palm foreground
+                elif data == 11:
+                    AnimatedSprite(pos, assets["palms"]["small_fg"], self.sprites)
+                # Large palm foreground
+                elif data == 12:
+                    
+
+    def _collect_coins(self):
+        """Collect the coins by the player"""
+        # Get the collided coins with the player, delete them
+        collided_coins = pygame.sprite.spritecollide(self.player, self.coin_sprites, True)
+
+        # Make some particles
+        for coin in collided_coins:
+            Particle(coin.rect.center, self.particle_assets, self.sprites)
